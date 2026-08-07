@@ -13,7 +13,7 @@ function verdict(role_title: string, extra: Partial<Parameters<typeof evaluate>[
   })
 }
 
-describe('filter: the allowlist runs first', () => {
+await describe('filter: the allowlist runs first', () => {
   // The whole reason for allowlist-before-reject: these all contain a token
   // that a reject rule matches.
   check('Design Engineer survives the engineering reject', verdict('Design Engineer').decision === 'pass')
@@ -25,7 +25,7 @@ describe('filter: the allowlist runs first', () => {
   eq('allow match is named', verdict('Design Engineer').allowMatch, 'design engineer')
 })
 
-describe('filter: title rejects', () => {
+await describe('filter: title rejects', () => {
   const rejects: [string, string][] = [
     ['Product Designer I', 'junior'],
     ['Associate Product Designer', 'junior'],
@@ -113,7 +113,7 @@ describe('filter: title rejects', () => {
   }
 })
 
-describe('filter: on-target titles are not rejected', () => {
+await describe('filter: on-target titles are not rejected', () => {
   for (const title of [
     'Design Engineer',
     'Founding Designer',
@@ -132,7 +132,7 @@ describe('filter: on-target titles are not rejected', () => {
   }
 })
 
-describe('filter: compensation flags but never rejects', () => {
+await describe('filter: compensation flags but never rejects', () => {
   const low = verdict('Design Engineer', { comp_min: 90_000, comp_max: 120_000 })
   check('sub-floor is flagged', low.compFlag)
   check('sub-floor still passes', low.decision === 'pass')
@@ -152,7 +152,7 @@ describe('filter: compensation flags but never rejects', () => {
   eq('reject reason is always the title', both.reason, 'title: pure frontend or software engineering')
 })
 
-describe('filter: years flag but never reject', () => {
+await describe('filter: years flag but never reject', () => {
   eq('4 years is a clean fit', yearsFlag(4, 8), null)
   eq('3 years is a clean fit', yearsFlag(3, null), null)
   eq('5 to 7 is a stretch', yearsFlag(5, 7), 'stretch_5to7')
@@ -165,7 +165,7 @@ describe('filter: years flag but never reject', () => {
   eq('and is flagged as a long shot', senior.yearsFlag, 'long_shot_10plus')
 })
 
-describe('filter: location', () => {
+await describe('filter: location', () => {
   const at = (location: string | null, remote_policy = 'onsite') =>
     verdict('Design Engineer', { location, remote_policy } as never)
 
@@ -195,7 +195,7 @@ describe('filter: location', () => {
   check('allowlisted title in Tokyo rejects', at('Tokyo, Japan').decision === 'reject')
 })
 
-describe('filter: keyword hits', () => {
+await describe('filter: keyword hits', () => {
   const v = verdict('Design Engineer', {
     description_text:
       'You will build human-in-the-loop review flows for our agent product, own the design system, and prototype in code with Cursor.',

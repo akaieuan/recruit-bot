@@ -4,9 +4,13 @@
  */
 export const state = { passed: 0, failures: [] as string[], suite: '' }
 
-export function describe(name: string, fn: () => void): void {
+/**
+ * Async bodies are awaited so the suite name is still set when their
+ * assertions run; otherwise every async failure reports with no suite.
+ */
+export async function describe(name: string, fn: () => void | Promise<void>): Promise<void> {
   state.suite = name
-  fn()
+  await fn()
   state.suite = ''
 }
 

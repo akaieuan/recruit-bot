@@ -3,7 +3,7 @@ import { extractComp, extractYears, looksNyc, remotePolicyFrom } from '../normal
 import { decodeEntities, htmlToText } from '../html.ts'
 import { salaryFrom } from '../ashby.ts'
 
-describe('extractComp', () => {
+await describe('extractComp', () => {
   eq('plain range', extractComp('The salary range is $150,000 - $200,000 per year.'), { min: 150000, max: 200000 })
   eq('k notation', extractComp('Compensation: $150K – $200K plus equity'), { min: 150000, max: 200000 })
   eq('"to" separator', extractComp('We pay $180,000 to $240,000'), { min: 180000, max: 240000 })
@@ -22,7 +22,7 @@ describe('extractComp', () => {
   )
 })
 
-describe('extractYears', () => {
+await describe('extractYears', () => {
   eq('range', extractYears('You have 5-8 years of experience'), { min: 5, max: 8 })
   eq('plus', extractYears('7+ years building products'), { min: 7, max: null })
   eq('at least', extractYears('at least 4 years of professional experience'), { min: 4, max: null })
@@ -32,7 +32,7 @@ describe('extractYears', () => {
   eq('no false positive', extractYears('We offer a 401k and unlimited PTO'), { min: null, max: null })
 })
 
-describe('remotePolicy', () => {
+await describe('remotePolicy', () => {
   eq('ashby onsite', remotePolicyFrom({ workplaceType: 'OnSite' }), 'onsite')
   eq('ashby hybrid', remotePolicyFrom({ workplaceType: 'Hybrid' }), 'hybrid')
   eq('ashby remote', remotePolicyFrom({ workplaceType: 'Remote' }), 'remote')
@@ -41,14 +41,14 @@ describe('remotePolicy', () => {
   eq('unknown', remotePolicyFrom({ text: 'Join our team' }), 'unknown')
 })
 
-describe('looksNyc', () => {
+await describe('looksNyc', () => {
   check('new york', looksNyc('New York, NY'))
   check('brooklyn', looksNyc('Credal HQ (Brooklyn, NY)'))
   check('nyc', looksNyc('NYC'))
   check('not sf', !looksNyc('San Francisco, CA'))
 })
 
-describe('salaryFrom (ashby)', () => {
+await describe('salaryFrom (ashby)', () => {
   eq(
     'annual usd salary',
     salaryFrom({
@@ -73,7 +73,7 @@ describe('salaryFrom (ashby)', () => {
   eq('absent', salaryFrom({ id: 'x', title: 'y' }), { min: null, max: null })
 })
 
-describe('html', () => {
+await describe('html', () => {
   eq('entities', decodeEntities('&lt;p&gt;Hi &amp; bye&lt;/p&gt;'), '<p>Hi & bye</p>')
   eq('numeric entities', decodeEntities('caf&#233; &#x2014;'), 'café —')
   eq('paragraphs to breaks', htmlToText('<p>One</p><p>Two</p>'), 'One\n\nTwo')

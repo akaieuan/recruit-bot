@@ -2,7 +2,7 @@ import { check, describe, eq } from './harness.ts'
 import { parseCsv, parseCsvRecords, toCsv } from '../csv.ts'
 import { normalizeStatus, parseAppliedDate } from '../tracker.ts'
 
-describe('csv parsing', () => {
+await describe('csv parsing', () => {
   eq('simple rows', parseCsv('a,b\n1,2'), [['a', 'b'], ['1', '2']])
   eq('quoted comma', parseCsv('a,b\n"x, y",2'), [['a', 'b'], ['x, y', '2']])
   eq('escaped quote', parseCsv('a\n"say ""hi"""'), [['a'], ['say "hi"']])
@@ -17,7 +17,7 @@ describe('csv parsing', () => {
   eq('records keyed by header', recs, [{ Company: 'Valence', Role: 'Product Designer, Senior' }])
 })
 
-describe('csv round trip', () => {
+await describe('csv round trip', () => {
   const header = ['Company', 'Notes']
   const rows = [['Acme', 'said "yes", eventually'], ['B, Inc', 'line1\nline2']]
   const out = toCsv(header, rows)
@@ -25,7 +25,7 @@ describe('csv round trip', () => {
   eq('survives a round trip', back, [header, ...rows])
 })
 
-describe('status normalization', () => {
+await describe('status normalization', () => {
   eq('applied', normalizeStatus('Applied').status, 'applied')
   eq('no response', normalizeStatus('Applied - no response').status, 'no_response')
   eq('applied in progress means interviewing', normalizeStatus('Applied - in progress').status, 'interviewing')
@@ -45,7 +45,7 @@ describe('status normalization', () => {
   check('a clean status is not flagged', !normalizeStatus('Applied').ambiguous)
 })
 
-describe('applied date parsing', () => {
+await describe('applied date parsing', () => {
   eq('iso date', parseAppliedDate('2026-08-07'), { date: '2026-08-07', precision: 'day' })
   // The CSV sentinel: the application happened at or before this date, exact
   // day unknown. Recorded as such rather than silently becoming that day.
