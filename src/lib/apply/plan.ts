@@ -41,7 +41,8 @@ export async function buildPlan(
   if (!posting) throw new Error(`no posting with id ${postingId}`)
 
   const profile = readProfile()
-  const gaps = profileGaps(profile)
+  // Filled in once the form's fields are known, below.
+  const gaps: string[] = []
 
   // Only approved drafts are used. A draft still in review has not been read
   // by him, and an application is not the place to find that out.
@@ -96,6 +97,22 @@ export async function buildPlan(
       if (!answers[q.key]) gaps.push(`no approved answer for "${q.label.slice(0, 70)}"`)
     }
   }
+
+  // Gaps are judged against what this form actually asks for. Ashby does not
+  // publish its schema, so when nothing is known every profile gap counts.
+  const askedFor = knownFields.length
+    ? new Set(
+        knownFields.flatMap((f) => {
+          const hay = `${f.label} ${f.name}`.toLowerCase()
+          const keys: string[] = []
+          if (/phone|mobile|telephone/.test(hay)) keys.push('phone')
+          if (/e ?mail/.test(hay)) keys.push('email')
+          if (/github/.test(hay)) keys.push('github')
+          return keys
+        }),
+      )
+    : undefined
+  gaps.unshift(...profileGaps(profile, askedFor))
 
   const resolutions = knownFields.map((field) => resolveField({ field, profile, answers, files }))
   const unresolvedRequired = resolutions.filter((r) => r.action === 'unresolved' && r.field.required !== false)

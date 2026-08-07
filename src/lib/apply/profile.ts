@@ -83,10 +83,23 @@ export function readProfile(): Profile {
   return JSON.parse(readFileSync(PROFILE_PATH, 'utf8')) as Profile
 }
 
-export function profileGaps(p: Profile): string[] {
+/**
+ * Gaps that matter for this form, not in the abstract.
+ *
+ * A missing phone number blocks an application that asks for one and is
+ * irrelevant to one that does not. Reporting it as blocking either way trains
+ * you to skim past the blocking list, which is the point at which it stops
+ * doing its job. Fields the form never shows are not gaps.
+ */
+export function profileGaps(p: Profile, askedFor?: Set<string>): string[] {
   const gaps: string[] = []
-  if (!p.phone) gaps.push('phone is not set in data/profile.json')
+  const asked = (key: string) => !askedFor || askedFor.has(key)
+
+  if (!p.phone && asked('phone')) gaps.push('phone is not set in data/profile.json, and this form asks for one')
   if (!existsSync(join(PATHS.repoRoot, p.resume_path))) gaps.push(`resume not found at ${p.resume_path}`)
-  for (const field of p.confirm ?? []) gaps.push(`"${field}" is marked for confirmation in data/profile.json`)
+
+  for (const field of p.confirm ?? []) {
+    if (asked(field)) gaps.push(`"${field}" is marked for confirmation in data/profile.json`)
+  }
   return gaps
 }
