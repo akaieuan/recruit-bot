@@ -1,0 +1,160 @@
+import type { NormalizedPosting, Posting } from './types.ts'
+
+/**
+ * The deterministic pass. Runs before any model sees a posting, because most
+ * of what a board publishes is off-target and rejecting it here is free.
+ *
+ * Two rules govern the design:
+ *   Titles reject; nothing else does. Compensation and years of experience
+ *   only ever raise a flag, because a stated band is a preference and a
+ *   posting worth arguing with should still reach a human.
+ *
+ *   The allowlist runs first. "Design Engineer" contains "engineer" and would
+ *   otherwise be caught by the frontend-engineering reject, which would
+ *   silently discard the single most on-target title there is.
+ */
+
+export const COMP_FLOOR = 140_000
+export const TARGET_BAND = { min: 150_000, max: 250_000 } as const
+
+/** Titles that are the whole point. Nothing below can reject these. */
+export const TITLE_ALLOW: { name: string; re: RegExp }[] = [
+  { name: 'design engineer', re: /\bdesign\s+engineer/i },
+  { name: 'founding designer', re: /\bfounding\s+(product\s+)?designer\b/i },
+  { name: 'product engineer', re: /\bproduct\s+engineer/i },
+  { name: 'creative technologist', re: /\bcreative\s+technologist\b/i },
+  { name: 'design technologist', re: /\bdesign\s+technologist\b/i },
+  { name: 'ui engineer (design-led)', re: /\b(ux|ui)\s+engineer\b/i },
+]
+
+/**
+ * Every rejection is a title pattern, each with the reason it exists.
+ *
+ * These are tuned against the titles that actually came back from the seeded
+ * boards, which is why some look oddly specific. Rejection is cheap and
+ * reversible: the reason is recorded, and `filter --all` re-runs the rules
+ * over everything after an edit, so a rule that turns out too broad costs one
+ * command to undo.
+ */
+export const TITLE_REJECT: { reason: string; re: RegExp }[] = [
+  {
+    // Overqualification reads as flight risk, and the level argues down.
+    reason: 'junior or associate level',
+    re: /\b(product\s+)?designer\s*(i|1)\b|\b(associate|junior|jr\.?|intern(ship)?|entry[- ]level|apprentice|new\s+grad)\b/i,
+  },
+  {
+    // He has never managed a design team and will not claim to. "Head of" and
+    // "Manager" are rejected whatever they lead: the req is a people role.
+    reason: 'people management or executive',
+    re: /\bhead\s+of\b|\bdirector\b|\bvp\b|\bvice\s+president\b|\bchief\b|\bc[teofmr]o\b|\bmanager\b|\bteam\s+lead\b|\bleader\b|\bpartner\b/i,
+  },
+  {
+    // Argues on his weakest axis: competes against deeper CS backgrounds.
+    reason: 'pure frontend or software engineering',
+    re: /\b(front[\s-]?end|frontend|backend|back[\s-]?end|full[\s-]?stack|software|platform|infrastructure|systems|security|mobile|ios|android|web|data|devops|cloud|network|qa|test)\s+(engineer|developer|architect)\b|\bsoftware\s+development\s+engineer\b|\bsre\b/i,
+  },
+  {
+    // Customer-facing engineering: deployment and implementation work, not
+    // product design.
+    reason: 'forward deployed or customer engineering',
+    re: /\bforward[\s-]?deployed\b|\bfde\b|\b(customer|client|solutions?|deployment|field|sales|partner|integration|implementation|support|content|gtm|go[\s-]?to[\s-]?market|growth)\s+(engineer|architect|consultant|strateg)/i,
+  },
+  {
+    reason: 'applied AI or ML engineering',
+    re: /\b(machine\s+learning|ml|ai|applied\s+ai|deep\s+learning|research|prompt)\s+(engineer|scientist|architect)\b|\bresearch\s+scientist\b|\bapplied\s+ai\b/i,
+  },
+  {
+    // An engineering req wearing a domain: "Staff Engineer, Security" and
+    // "Senior Platform Reliability Engineer" split the adjacency the rule
+    // above relies on, so the domain word is matched wherever it appears.
+    reason: 'specialist engineering domain',
+    re: /\bengineer(ing)?\b[\s\S]*\b(security|reliability|platform|infrastructure|distributed|supercomputing|compiler|kernel|database|observability|networking|embedded)\b|\b(security|reliability|platform|infrastructure|distributed|supercomputing|compiler|kernel|database|observability|networking|embedded)\b[\s\S]*\bengineer(ing)?\b/i,
+  },
+  {
+    reason: 'developer relations or evangelism',
+    re: /\bdev\s?rel\b|\bdeveloper\s+(advocate|relations|experience)\b|\bevangelist\b|\badvocate\b|\bcommunity\b/i,
+  },
+  {
+    // No consumer research, no quant depth, no SQL.
+    reason: 'dedicated research',
+    re: /\bresearch(er)?\b|\bscientist\b|\banalyst\b|\banalytics\b/i,
+  },
+  {
+    // Advisory and strategy work, not building. Tenex posts ten of these.
+    reason: 'strategy, consulting or operations',
+    re: /\bstrateg(ist|y)\b|\bconsultant\b|\bops\b|\boperations\b|\badvisor\b|\bprogram\b|\bproject\b|\btpm\b|\bchief\s+of\s+staff\b|\bcreator\b|\bproducer\b/i,
+  },
+  {
+    // Discipline leads are people roles even when the title says IC. The
+    // allowlist protects "Lead Design Engineer" and friends before this runs.
+    reason: 'discipline lead',
+    re: /\b(creative|design|engineering|technical|tech|product)\s+lead\b|\blead,\s/i,
+  },
+  {
+    reason: 'not a design or engineering role',
+    re: /\b(account\s+(executive|manager)|sales|business\s+development|bd\b|revenue|recruit(er|ing)|talent|people\s+ops|hr\b|marketing|marketer|abm\b|finance|accountant|accounting|controller|legal|counsel|compliance|customer\s+success|client\s+success|customer\s+support|executive\s+assistant|office\s+manager|coordinator|representative|specialist|partnerships)/i,
+  },
+  {
+    // Generic pipeline reqs with no role attached.
+    reason: 'open pipeline req, not a specific role',
+    re: /\btalent\s+(network|pool|community)\b|\bgeneral\s+application\b|\bfuture\s+opportunit|\bspeculative\b|\bbring\s+your\s+own\b/i,
+  },
+]
+
+/** JD signals worth surfacing. Presence is informative; absence rejects nothing. */
+export const JD_KEYWORDS = [
+  'agent', 'human-in-the-loop', 'human in the loop', 'review', 'approval',
+  'evaluation', 'eval', 'design system', 'prototype in code', 'prototyping in code',
+  'claude code', 'cursor', 'shadcn', 'electron', 'founding', 'design engineer',
+  'ship', 'zero to one', '0 to 1', 'first design hire', 'craft',
+] as const
+
+export interface FilterVerdict {
+  decision: 'pass' | 'reject'
+  reason: string | null
+  compFlag: boolean
+  yearsFlag: string | null
+  keywordHits: string[]
+  allowMatch: string | null
+}
+
+type FilterInput = Pick<
+  Posting | NormalizedPosting,
+  'role_title' | 'comp_min' | 'comp_max' | 'years_min' | 'years_max' | 'description_text'
+>
+
+export function evaluate(posting: FilterInput): FilterVerdict {
+  const title = posting.role_title ?? ''
+  const text = (posting.description_text ?? '').toLowerCase()
+
+  const allow = TITLE_ALLOW.find((a) => a.re.test(title))
+  const reject = allow ? undefined : TITLE_REJECT.find((r) => r.re.test(title))
+
+  // A posted maximum below the floor is the real signal: a low minimum with a
+  // healthy top of band is a normal range, not an underpaid role.
+  const ceiling = posting.comp_max ?? posting.comp_min
+  const compFlag = ceiling !== null && ceiling !== undefined && ceiling < COMP_FLOOR
+
+  const keywordHits = JD_KEYWORDS.filter((k) => text.includes(k))
+
+  return {
+    decision: reject ? 'reject' : 'pass',
+    reason: reject ? `title: ${reject.reason}` : null,
+    compFlag,
+    yearsFlag: yearsFlag(posting.years_min ?? null, posting.years_max ?? null),
+    keywordHits: [...new Set(keywordHits)],
+    allowMatch: allow?.name ?? null,
+  }
+}
+
+/**
+ * Four years in. 3 to 8 is a clean fit, 5 to 7 a normal stretch worth taking,
+ * 10+ a long shot worth surfacing anyway. None of these reject.
+ */
+export function yearsFlag(min: number | null, max: number | null): string | null {
+  if (min === null) return null
+  if (min >= 10) return 'long_shot_10plus'
+  if (min >= 8) return 'stretch_8plus'
+  if (min >= 5) return 'stretch_5to7'
+  return null
+}
