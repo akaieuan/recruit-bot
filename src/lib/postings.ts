@@ -1,0 +1,117 @@
+import { nowIso, plain, plainAll, type Db } from './db.ts'
+import { contentHash } from './normalize.ts'
+import type { NormalizedPosting, Posting, Stage } from './types.ts'
+
+export interface UpsertResult {
+  inserted: number
+  updated: number
+  changed: number
+  ids: number[]
+}
+
+/**
+ * Insert new postings, refresh ones already seen.
+ *
+ * A posting whose description changed goes back to 'new' so it gets refiltered
+ * and rescored: an edited JD can turn a reject into a fit or the reverse. A
+ * posting already drafted or applied to is never rewound, because that would
+ * discard human review.
+ */
+export function upsertPostings(db: Db, items: NormalizedPosting[]): UpsertResult {
+  const now = nowIso()
+  const result: UpsertResult = { inserted: 0, updated: 0, changed: 0, ids: [] }
+
+  const findByUrl = db.prepare('SELECT * FROM postings WHERE url = ?')
+  const insert = db.prepare(`
+    INSERT INTO postings (
+      ats, board_token, job_id, url, company, role_title, location, remote_policy,
+      comp_min, comp_max, years_min, years_max, description_html, description_text,
+      content_hash, first_seen, last_seen, stage
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')
+  `)
+  const refresh = db.prepare(`
+    UPDATE postings SET
+      role_title = ?, location = ?, remote_policy = ?, comp_min = ?, comp_max = ?,
+      years_min = ?, years_max = ?, description_html = ?, description_text = ?,
+      content_hash = ?, last_seen = ?, closed_at = NULL
+    WHERE id = ?
+  `)
+  const rewind = db.prepare("UPDATE postings SET stage = 'new', stage_reason = ? WHERE id = ?")
+
+  const SETTLED: Stage[] = ['needs_draft', 'in_review', 'approved', 'applied']
+
+  for (const p of items) {
+    const hash = contentHash(p.role_title, p.location, p.description_text, String(p.comp_min), String(p.comp_max))
+    const existing = findByUrl.get(p.url) as Posting | undefined
+
+    if (!existing) {
+      insert.run(
+        p.ats, p.board_token, p.job_id, p.url, p.company, p.role_title, p.location, p.remote_policy,
+        p.comp_min, p.comp_max, p.years_min, p.years_max, p.description_html, p.description_text,
+        hash, now, now,
+      )
+      const row = findByUrl.get(p.url) as Posting
+      result.inserted++
+      result.ids.push(row.id)
+      continue
+    }
+
+    refresh.run(
+      p.role_title, p.location, p.remote_policy, p.comp_min, p.comp_max,
+      p.years_min, p.years_max, p.description_html, p.description_text,
+      hash, now, existing.id,
+    )
+    result.updated++
+    result.ids.push(existing.id)
+
+    if (existing.content_hash && existing.content_hash !== hash && !SETTLED.includes(existing.stage)) {
+      rewind.run('description changed since last poll', existing.id)
+      result.changed++
+    }
+  }
+
+  return result
+}
+
+/**
+ * Mark postings that a successful board poll no longer lists. Only called on a
+ * clean fetch: a network error must never be read as "every job closed".
+ */
+export function closeMissing(db: Db, ats: string, token: string, liveIds: string[]): number {
+  const rows = plainAll<Posting>(
+    db.prepare('SELECT * FROM postings WHERE ats = ? AND board_token = ? AND closed_at IS NULL').all(ats, token),
+  )
+  const live = new Set(liveIds)
+  const close = db.prepare('UPDATE postings SET closed_at = ? WHERE id = ?')
+  const now = nowIso()
+  let n = 0
+  for (const row of rows) {
+    if (row.job_id && !live.has(row.job_id)) {
+      close.run(now, row.id)
+      n++
+    }
+  }
+  return n
+}
+
+export function getPosting(db: Db, id: number): Posting | undefined {
+  const row = db.prepare('SELECT * FROM postings WHERE id = ?').get(id)
+  return row ? plain<Posting>(row) : undefined
+}
+
+export function postingsByStage(db: Db, stage: Stage, limit?: number): Posting[] {
+  const sql = `SELECT * FROM postings WHERE stage = ? AND closed_at IS NULL ORDER BY id${limit ? ' LIMIT ?' : ''}`
+  const rows = limit ? db.prepare(sql).all(stage, limit) : db.prepare(sql).all(stage)
+  return plainAll<Posting>(rows)
+}
+
+export function setStage(db: Db, id: number, stage: Stage, reason?: string | null): void {
+  db.prepare('UPDATE postings SET stage = ?, stage_reason = ? WHERE id = ?').run(stage, reason ?? null, id)
+}
+
+export function stageCounts(db: Db): Record<string, number> {
+  const rows = plainAll<{ stage: string; n: number }>(
+    db.prepare('SELECT stage, count(*) AS n FROM postings WHERE closed_at IS NULL GROUP BY stage').all(),
+  )
+  return Object.fromEntries(rows.map((r) => [r.stage, r.n]))
+}
