@@ -68,6 +68,47 @@ await describe('validate: never claim a gap', async () => {
     check(`and names the gap`, err(r, 'claimed_gap').some((e) => e.message.includes(pattern)))
   }
 
+  // A bare substring search reads "CRE" inside "screen" and "SQL" inside
+  // "SQLite". Refusing a clean draft for a claim it never made teaches people
+  // to override the validator, which is worse than not having one.
+  setFactsForTesting({
+    generated_at: '2026-01-01',
+    source: 'test',
+    facts: [{ id: 'ubik.commits', text: '1,038 commits', tags: [] }],
+    gaps: [
+      { id: 'gap.cre', text: 'No CRE domain experience', patterns: ['CRE'] },
+      { id: 'gap.ml', text: 'No ML research background', patterns: ['ML research'] },
+      { id: 'gap.ab', text: 'No A/B program ownership', patterns: ['A/B'] },
+    ],
+  })
+  for (const innocent of [
+    'agreeing was the cheapest action on the screen',
+    'the increase came from a clearer layout',
+    'I write HTML by hand when it matters',
+    'credentials are handled by the host',
+  ]) {
+    const r = await validateDraft({ body: `${GOOD}\n\n${innocent}`, factsUsed: ['ubik.commits'] })
+    check(`"${innocent.slice(0, 34)}..." is not a claimed gap`, r.ok, r.errors.map((e) => e.message).join('; '))
+  }
+
+  // Patterns whose own edges are not word characters still match.
+  const ab = await validateDraft({ body: `${GOOD}\n\nI ran an A/B program.`, factsUsed: ['ubik.commits'] })
+  check('"A/B" still matches', !ab.ok)
+
+  setFactsForTesting({
+    generated_at: '2026-01-01',
+    source: 'test',
+    facts: [
+      { id: 'ubik.commits', text: '1,038 commits over three years', tags: ['ubik'] },
+      { id: 'oss.hitl-kit', text: 'HITL Kit: 19 React primitives', tags: ['oss'] },
+    ],
+    gaps: [
+      { id: 'gap.sql', text: 'No real SQL. Rate Beginner.', patterns: ['SQL'] },
+      { id: 'gap.rn', text: 'No React Native shipped.', patterns: ['React Native'] },
+      { id: 'gap.manage', text: 'Never managed a design team', patterns: ['managed a design team'] },
+    ],
+  })
+
   // An honest negation is the one legitimate reason to name a gap.
   const honest = await validateDraft({
     body: `${GOOD}\n\nI have not shipped React Native.`,

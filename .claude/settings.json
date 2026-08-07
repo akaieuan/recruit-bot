@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm cli:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm typecheck:*)",
+      "Read(./data/**)",
+      "Write(./data/work/**)",
+      "Edit(./data/work/**)",
+      "WebSearch",
+      "WebFetch"
+    ]
+  }
+}

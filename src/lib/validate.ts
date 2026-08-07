@@ -41,13 +41,34 @@ const HOUSE_STYLE = [
 /** The metaphor shape he named and disliked: "X is a Y wearing Z's clothes." */
 const METAPHOR_SHAPE = /\bis\s+(?:a|an)\s+\w+(?:\s+\w+)?\s+(?:wearing|dressed\s+in|in)\s+\w+(?:'s)?\s+(?:clothes|clothing|skin|disguise)/i
 
+/** A window around the match, so a long paragraph does not bury the problem. */
+function excerptAround(body: string, at: number, length: number, pad = 55): string {
+  const start = Math.max(0, at - pad)
+  const end = Math.min(body.length, at + length + pad)
+  return `${start > 0 ? '...' : ''}${body.slice(start, end).replace(/\s+/g, ' ').trim()}${end < body.length ? '...' : ''}`
+}
+
 function findLine(body: string, needle: string): string | undefined {
-  const lower = body.toLowerCase()
-  const at = lower.indexOf(needle.toLowerCase())
+  const at = body.toLowerCase().indexOf(needle.toLowerCase())
   if (at === -1) return undefined
-  const start = body.lastIndexOf('\n', at) + 1
-  const end = body.indexOf('\n', at)
-  return body.slice(start, end === -1 ? undefined : end).trim().slice(0, 160)
+  return excerptAround(body, at, needle.length)
+}
+
+/**
+ * Gap vocabulary matched on word boundaries.
+ *
+ * A bare substring search reads "CRE" inside "screen" and "ML" inside "HTML",
+ * so a clean draft gets refused for a claim it never made. A validator that
+ * cries wolf is one people learn to override, which is worse than not having
+ * it. Boundaries are only added where the pattern's own edges are word
+ * characters, so "A/B" and "Builder.io" still match.
+ */
+function gapMatch(body: string, pattern: string): { index: number; length: number } | null {
+  const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const leading = /^\w/.test(pattern) ? '\\b' : ''
+  const trailing = /\w$/.test(pattern) ? '\\b' : ''
+  const m = new RegExp(`${leading}${escaped}${trailing}`, 'i').exec(body)
+  return m ? { index: m.index, length: m[0].length } : null
 }
 
 export interface ValidateDraftOptions {
@@ -101,11 +122,12 @@ export async function validateDraft(opts: ValidateDraftOptions): Promise<Validat
   for (const gap of readFacts().gaps) {
     if (allowed.has(gap.id)) continue
     for (const pattern of gap.patterns) {
-      if (!lower.includes(pattern.toLowerCase())) continue
+      const hit = gapMatch(body, pattern)
+      if (!hit) continue
       errors.push({
         rule: 'claimed_gap',
         message: `mentions "${pattern}", which is on the never-claim list: ${gap.text}`,
-        excerpt: findLine(body, pattern),
+        excerpt: excerptAround(body, hit.index, hit.length),
       })
       break
     }
