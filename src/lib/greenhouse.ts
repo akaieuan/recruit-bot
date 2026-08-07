@@ -118,17 +118,23 @@ export async function fetchGreenhouseQuestions(
 }
 
 /**
- * Questions worth drafting an answer for: free-text prompts, not the resume
- * upload, demographic blocks, or yes/no compliance checkboxes.
+ * Questions worth drafting an answer for.
+ *
+ * Greenhouse types the fields, and 'textarea' is the essay slot: every prompt
+ * that wants prose is one, while names, addresses, start dates and target
+ * compensation are input_text. Compensation expectations are deliberately out
+ * of scope even though they are prose-ish, because that number is a judgment
+ * only he can make and a drafted one would read as decided.
  */
 export function draftableQuestions(questions: ApplicationQuestion[]): ApplicationQuestion[] {
-  const skip = /^(first_name|last_name|name|email|phone|resume|cover_letter|location|org_id|gender|race|veteran|disability|hispanic)/i
+  const skipKey = /^(first_name|last_name|name|email|phone|resume|cover_letter|org_id|gender|race|veteran|disability|hispanic)/i
+  const skipLabel = /\b(compensation|salary|pay range|sponsorship|visa|pronouns|how did you hear|demographic)\b/i
+
   return questions.filter(
     (q) =>
-      !skip.test(q.key) &&
+      q.type === 'textarea' &&
       !q.options?.length &&
-      /textarea|input_text|long_text/i.test(q.type) &&
-      // A short label with no question mark is usually a URL field, not a prompt.
-      (q.label.length > 24 || q.label.includes('?')),
+      !skipKey.test(q.key) &&
+      !skipLabel.test(q.label),
   )
 }
