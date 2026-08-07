@@ -89,6 +89,23 @@ describe('filter: title rejects', () => {
     ['Growth Marketer', 'non-design'],
     ['Creative Producer', 'strategy'],
     ['Creative Lead', 'discipline lead'],
+    ['Engagement Lead', 'discipline lead'],
+    ['Infrastructure Tax Lead', 'discipline lead'],
+    ['Deployment Lead - ERP Solutions', 'discipline lead'],
+    ['Lead Product Builder, Product & Design', 'discipline lead'],
+    ['Incident & Crisis Management Lead', 'management'],
+    ['Product Management, Human Data Platform', 'management'],
+    ['Brand Ambassador', 'non-design'],
+    ['Administrative & Office Assistant', 'non-design'],
+    ['Product Expert, PLM and ERP', 'non-design'],
+    ['Insider Risk Investigator', 'non-design'],
+    ['Audience Booker (Contract)', 'non-design'],
+    ['Performance Engineer, GPU', 'specialist engineering'],
+    ['Silicon Engineer', 'specialist engineering'],
+    ['Quantitative Engineer', 'specialist engineering'],
+    ['Brand/Graphic Designer', 'adjacent design'],
+    ['Rive Motion Designer and Animator (Contract)', 'adjacent design'],
+    ['Art Director', 'management'],
   ]
   for (const [title] of rejects) {
     const v = verdict(title)
@@ -146,6 +163,36 @@ describe('filter: years flag but never reject', () => {
   const senior = verdict('Design Engineer', { years_min: 12, years_max: null })
   check('12 years still passes', senior.decision === 'pass')
   eq('and is flagged as a long shot', senior.yearsFlag, 'long_shot_10plus')
+})
+
+describe('filter: location', () => {
+  const at = (location: string | null, remote_policy = 'onsite') =>
+    verdict('Design Engineer', { location, remote_policy } as never)
+
+  check('NYC passes', at('New York, NY').decision === 'pass')
+  check('Brooklyn passes', at('Credal HQ (Brooklyn, NY)').decision === 'pass')
+  check('Manhattan passes', at('Manhattan').decision === 'pass')
+  // A multi-city req lists every office, so one NYC mention is enough.
+  check('multi-city with NYC passes', at('San Francisco, CA | New York City, NY').decision === 'pass')
+
+  check('San Francisco rejects', at('San Francisco').decision === 'reject')
+  check('Seoul rejects', at('Seoul, Korea').decision === 'reject')
+  check('Malaysia rejects', at('Malaysia').decision === 'reject')
+  eq('and says why', at('Seoul, Korea').reason, 'outside the NYC metro')
+
+  // Remote rescues a role only when it is anchored in the US.
+  check('US remote passes', at('United States', 'remote').decision === 'pass')
+  check('remote with no location passes', at(null, 'remote').decision === 'pass')
+  check('remote in Portugal rejects', at('Portugal', 'remote').decision === 'reject')
+  check('remote in Indonesia rejects', at('Indonesia', 'remote').decision === 'reject')
+  check('remote in Canada rejects', at('Toronto, Canada', 'remote').decision === 'reject')
+  // Absence of a location is not evidence of a bad one.
+  check('unstated location passes', at(null).decision === 'pass')
+  check('empty location passes', at('  ').decision === 'pass')
+
+  // Location outranks the allowlist: a great title in the wrong city is still
+  // in the wrong city.
+  check('allowlisted title in Tokyo rejects', at('Tokyo, Japan').decision === 'reject')
 })
 
 describe('filter: keyword hits', () => {

@@ -1,3 +1,4 @@
+import { looksNonUs, looksNyc } from './normalize.ts'
 import type { NormalizedPosting, Posting } from './types.ts'
 
 /**
@@ -46,12 +47,12 @@ export const TITLE_REJECT: { reason: string; re: RegExp }[] = [
     // He has never managed a design team and will not claim to. "Head of" and
     // "Manager" are rejected whatever they lead: the req is a people role.
     reason: 'people management or executive',
-    re: /\bhead\s+of\b|\bdirector\b|\bvp\b|\bvice\s+president\b|\bchief\b|\bc[teofmr]o\b|\bmanager\b|\bteam\s+lead\b|\bleader\b|\bpartner\b/i,
+    re: /\bhead\s+of\b|\bdirector\b|\bvp\b|\bvice\s+president\b|\bchief\b|\bc[teofmr]o\b|\bmanager\b|\bmanagement\b|\bteam\s+lead\b|\bleader\b|\bpartner\b/i,
   },
   {
     // Argues on his weakest axis: competes against deeper CS backgrounds.
     reason: 'pure frontend or software engineering',
-    re: /\b(front[\s-]?end|frontend|backend|back[\s-]?end|full[\s-]?stack|software|platform|infrastructure|systems|security|mobile|ios|android|web|data|devops|cloud|network|qa|test)\s+(engineer|developer|architect)\b|\bsoftware\s+development\s+engineer\b|\bsre\b/i,
+    re: /\b(front[\s-]?end|frontend|backend|back[\s-]?end|full[\s-]?stack|software|platform|infrastructure|systems|security|mobile|ios|android|web|data|devops|cloud|network|qa|test|performance|silicon|hardware|quantitative|firmware)\s+(engineer|developer|architect)\b|\bsoftware\s+development\s+engineer\b|\bsre\b/i,
   },
   {
     // Customer-facing engineering: deployment and implementation work, not
@@ -87,12 +88,20 @@ export const TITLE_REJECT: { reason: string; re: RegExp }[] = [
   {
     // Discipline leads are people roles even when the title says IC. The
     // allowlist protects "Lead Design Engineer" and friends before this runs.
+    // The allowlist protects "Lead Design Engineer" before this runs, so a
+    // bare "Lead" anywhere else is safe to treat as a people role.
     reason: 'discipline lead',
-    re: /\b(creative|design|engineering|technical|tech|product)\s+lead\b|\blead,\s/i,
+    re: /\blead\b/i,
+  },
+  {
+    // Adjacent design disciplines. Real work, but not the positioning: these
+    // argue from craft he does not sell.
+    reason: 'adjacent design discipline',
+    re: /\b(graphic|brand|motion|visual|marketing|packaging|industrial|game|3d)\s+designer\b|\bart\s+director\b|\banimator\b|\billustrator\b/i,
   },
   {
     reason: 'not a design or engineering role',
-    re: /\b(account\s+(executive|manager)|sales|business\s+development|bd\b|revenue|recruit(er|ing)|talent|people\s+ops|hr\b|marketing|marketer|abm\b|finance|accountant|accounting|controller|legal|counsel|compliance|customer\s+success|client\s+success|customer\s+support|executive\s+assistant|office\s+manager|coordinator|representative|specialist|partnerships)/i,
+    re: /\b(account\s+(executive|manager)|sales|business\s+development|bd\b|revenue|recruit(er|ing)|talent|people\s+ops|hr\b|marketing|marketer|abm\b|finance|accountant|accounting|controller|legal|counsel|compliance|customer\s+success|client\s+success|customer\s+support|assistant|ambassador|expert|investigator|booker|office\s+manager|coordinator|representative|specialist|partnerships)/i,
   },
   {
     // Generic pipeline reqs with no role attached.
@@ -121,14 +130,38 @@ export interface FilterVerdict {
 type FilterInput = Pick<
   Posting | NormalizedPosting,
   'role_title' | 'comp_min' | 'comp_max' | 'years_min' | 'years_max' | 'description_text'
->
+> & { location?: string | null; remote_policy?: string | null }
+
+/**
+ * He is in Brooklyn and wants in-person or hybrid, so a role anchored to
+ * another city is out regardless of how good it looks. Remote survives (a
+ * weaker fit, not a disqualifier) and so does an unstated location, because
+ * absence of information is not evidence of a bad location.
+ */
+export function outsideNyc(location: string | null | undefined, remotePolicy: string | null | undefined): boolean {
+  if (!location?.trim()) return false
+  // Multi-city postings list every office, so one NYC mention is enough.
+  if (looksNyc(location)) return false
+  // Remote rescues a role only when it is anchored in the US. A globally
+  // remote req based abroad is not a real option from Brooklyn.
+  if (remotePolicy === 'remote') return looksNonUs(location)
+  return true
+}
 
 export function evaluate(posting: FilterInput): FilterVerdict {
   const title = posting.role_title ?? ''
   const text = (posting.description_text ?? '').toLowerCase()
 
   const allow = TITLE_ALLOW.find((a) => a.re.test(title))
-  const reject = allow ? undefined : TITLE_REJECT.find((r) => r.re.test(title))
+  let reject: { reason: string; re: RegExp; bare?: boolean } | undefined = allow
+    ? undefined
+    : TITLE_REJECT.find((r) => r.re.test(title))
+
+  // Location rejects even an allowlisted title: a Design Engineer role in
+  // Seoul is still a Design Engineer role in Seoul.
+  if (!reject && outsideNyc(posting.location, posting.remote_policy)) {
+    reject = { reason: 'outside the NYC metro', re: /(?:)/, bare: true }
+  }
 
   // A posted maximum below the floor is the real signal: a low minimum with a
   // healthy top of band is a normal range, not an underpaid role.
@@ -139,7 +172,7 @@ export function evaluate(posting: FilterInput): FilterVerdict {
 
   return {
     decision: reject ? 'reject' : 'pass',
-    reason: reject ? `title: ${reject.reason}` : null,
+    reason: reject ? (reject.bare ? reject.reason : `title: ${reject.reason}`) : null,
     compFlag,
     yearsFlag: yearsFlag(posting.years_min ?? null, posting.years_max ?? null),
     keywordHits: [...new Set(keywordHits)],

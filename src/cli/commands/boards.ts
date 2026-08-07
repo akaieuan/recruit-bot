@@ -3,7 +3,7 @@ import { addBoard, discoverBoardsFromApplications, listBoards, SEED_BOARDS, setB
 import { args, fail, plural, table } from '../util.ts'
 
 export function run(argv: string[]): void {
-  const { positionals } = args(argv, {})
+  const { values, positionals } = args(argv, { purge: { type: 'boolean' } })
   const sub = positionals[0]
   const db = openDb()
 
@@ -28,9 +28,23 @@ export function run(argv: string[]): void {
   if (sub === 'disable' || sub === 'enable') {
     const ats = positionals[1]
     const token = positionals[2]
-    if (!ats || !token) fail(`usage: pnpm cli boards ${sub} <ats> <token>`)
+    if (!ats || !token) fail(`usage: pnpm cli boards ${sub} <ats> <token> [--purge]`)
     setBoardActive(db, ats, token, sub === 'enable')
     console.log(`${sub}d ${ats}:${token}`)
+
+    // Disabling stops future polls; --purge also retires what the board
+    // already contributed. Anything drafted or applied to is left alone,
+    // because that represents work a human already did.
+    if (sub === 'disable' && values.purge) {
+      const { changes } = db
+        .prepare(
+          `UPDATE postings SET stage = 'skipped', stage_reason = 'board disabled'
+           WHERE ats = ? AND board_token = ?
+             AND stage NOT IN ('needs_draft', 'in_review', 'approved', 'applied')`,
+        )
+        .run(ats, token)
+      console.log(`retired ${plural(Number(changes), 'posting')} from that board`)
+    }
     return
   }
 
