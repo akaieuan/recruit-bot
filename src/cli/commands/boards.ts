@@ -9,7 +9,11 @@ export function run(argv: string[]): void {
 
   if (sub === 'seed') {
     let added = 0
-    for (const b of SEED_BOARDS) if (addBoard(db, b.ats, b.token)) added++
+    for (const b of SEED_BOARDS) if (addBoard(db, b.ats, b.token, b.company)) added++
+    // Backfill display names onto boards seeded before they were recorded.
+    const name = db.prepare("UPDATE boards SET company = ? WHERE ats = ? AND board_token = ? AND ifnull(company, '') = ''")
+    for (const b of SEED_BOARDS) name.run(b.company, b.ats, b.token)
+
     const discovered = discoverBoardsFromApplications(db)
     console.log(`seeded ${plural(added, 'board')}, discovered ${plural(discovered, 'board')} from tracker URLs`)
     console.log(`${plural(listBoards(db).length, 'active board')} total`)

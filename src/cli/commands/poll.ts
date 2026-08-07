@@ -1,5 +1,5 @@
 import { openDb } from '../../lib/db.ts'
-import { listBoards } from '../../lib/boards.ts'
+import { listBoards, prettifyToken } from '../../lib/boards.ts'
 import { fetchAshbyBoard, fetchAshbyPosting } from '../../lib/ashby.ts'
 import { fetchGreenhouseBoard } from '../../lib/greenhouse.ts'
 import { closeMissing, upsertPostings } from '../../lib/postings.ts'
@@ -52,7 +52,8 @@ export async function run(argv: string[]): Promise<void> {
     try {
       const postings =
         board.ats === 'ashby'
-          ? await fetchAshbyBoard(board.board_token)
+          ? // Ashby publishes no company name, so the board row supplies one.
+            await fetchAshbyBoard(board.board_token, board.company ?? prettifyToken(board.board_token))
           : await fetchGreenhouseBoard(board.board_token)
 
       const r = upsertPostings(db, postings)

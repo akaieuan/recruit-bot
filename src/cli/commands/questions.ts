@@ -32,7 +32,7 @@ export async function run(argv: string[]): Promise<void> {
     ORDER BY p.id
     LIMIT ?
   `
-  const params: unknown[] = values.posting ? [Number(values.posting)] : []
+  const params: (string | number)[] = values.posting ? [Number(values.posting)] : []
   const postings = plainAll<Posting>(db.prepare(sql).all(...params, Number(values.limit ?? 25)))
 
   if (!postings.length) {

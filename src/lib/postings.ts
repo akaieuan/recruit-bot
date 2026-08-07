@@ -29,9 +29,11 @@ export function upsertPostings(db: Db, items: NormalizedPosting[]): UpsertResult
       content_hash, first_seen, last_seen, stage
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')
   `)
+  // company is refreshed too: Ashby publishes no company name, so a display
+  // name added to the boards table later has to reach postings already stored.
   const refresh = db.prepare(`
     UPDATE postings SET
-      role_title = ?, location = ?, remote_policy = ?, comp_min = ?, comp_max = ?,
+      company = ?, role_title = ?, location = ?, remote_policy = ?, comp_min = ?, comp_max = ?,
       years_min = ?, years_max = ?, description_html = ?, description_text = ?,
       content_hash = ?, last_seen = ?, closed_at = NULL
     WHERE id = ?
@@ -42,7 +44,8 @@ export function upsertPostings(db: Db, items: NormalizedPosting[]): UpsertResult
 
   for (const p of items) {
     const hash = contentHash(p.role_title, p.location, p.description_text, String(p.comp_min), String(p.comp_max))
-    const existing = findByUrl.get(p.url) as Posting | undefined
+    const existingRow = findByUrl.get(p.url)
+    const existing = existingRow ? plain<Posting>(existingRow) : undefined
 
     if (!existing) {
       insert.run(
@@ -50,14 +53,14 @@ export function upsertPostings(db: Db, items: NormalizedPosting[]): UpsertResult
         p.comp_min, p.comp_max, p.years_min, p.years_max, p.description_html, p.description_text,
         hash, now, now,
       )
-      const row = findByUrl.get(p.url) as Posting
+      const row = plain<Posting>(findByUrl.get(p.url))
       result.inserted++
       result.ids.push(row.id)
       continue
     }
 
     refresh.run(
-      p.role_title, p.location, p.remote_policy, p.comp_min, p.comp_max,
+      p.company, p.role_title, p.location, p.remote_policy, p.comp_min, p.comp_max,
       p.years_min, p.years_max, p.description_html, p.description_text,
       hash, now, existing.id,
     )

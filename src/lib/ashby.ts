@@ -54,7 +54,7 @@ export function salaryFrom(job: AshbyJob): { min: number | null; max: number | n
   return { min, max }
 }
 
-export function normalizeAshbyJob(token: string, job: AshbyJob): NormalizedPosting | null {
+export function normalizeAshbyJob(token: string, job: AshbyJob, company?: string): NormalizedPosting | null {
   if (!job.id || !job.title) return null
 
   const text = job.descriptionPlain?.trim() || ''
@@ -71,8 +71,9 @@ export function normalizeAshbyJob(token: string, job: AshbyJob): NormalizedPosti
     board_token: token,
     job_id: job.id,
     url: job.jobUrl ?? `https://jobs.ashbyhq.com/${token}/${job.id}`,
-    // The board API carries no company name field; the token is the company.
-    company: token,
+    // The board API carries no company name field, so the caller supplies a
+    // display name; the token is only a fallback.
+    company: company?.trim() || token,
     role_title: job.title.trim(),
     location,
     remote_policy: remotePolicyFrom({
@@ -90,14 +91,14 @@ export function normalizeAshbyJob(token: string, job: AshbyJob): NormalizedPosti
   }
 }
 
-export async function fetchAshbyBoard(token: string): Promise<NormalizedPosting[]> {
+export async function fetchAshbyBoard(token: string, company?: string): Promise<NormalizedPosting[]> {
   const res = await fetch(BOARD_URL(token), {
     headers: { accept: 'application/json', 'user-agent': 'recruit-bot (personal job search tool)' },
   })
   if (!res.ok) throw new Error(`ashby ${token}: HTTP ${res.status}`)
   const body = (await res.json()) as { jobs?: AshbyJob[] }
   const jobs = body.jobs ?? []
-  return jobs.map((j) => normalizeAshbyJob(token, j)).filter((p): p is NormalizedPosting => p !== null)
+  return jobs.map((j) => normalizeAshbyJob(token, j, company)).filter((p): p is NormalizedPosting => p !== null)
 }
 
 /** Pulls the board token and job id out of a jobs.ashbyhq.com posting URL. */
@@ -112,11 +113,11 @@ export function parseAshbyUrl(url: string): { token: string; jobId: string } | n
  * absent from the board response, so this asks the board first and only then
  * falls back to the page's embedded JSON payload.
  */
-export async function fetchAshbyPosting(url: string): Promise<NormalizedPosting | null> {
+export async function fetchAshbyPosting(url: string, company?: string): Promise<NormalizedPosting | null> {
   const parsed = parseAshbyUrl(url)
   if (!parsed) return null
 
-  const listed = await fetchAshbyBoard(parsed.token).catch(() => [])
+  const listed = await fetchAshbyBoard(parsed.token, company).catch(() => [])
   const hit = listed.find((p) => p.job_id === parsed.jobId)
   if (hit) return hit
 
@@ -129,7 +130,7 @@ export async function fetchAshbyPosting(url: string): Promise<NormalizedPosting 
     const data = JSON.parse(m[1]) as { posting?: AshbyJob }
     if (!data.posting) return null
     const job: AshbyJob = { ...data.posting, id: data.posting.id ?? parsed.jobId }
-    return normalizeAshbyJob(parsed.token, job)
+    return normalizeAshbyJob(parsed.token, job, company)
   } catch {
     return null
   }

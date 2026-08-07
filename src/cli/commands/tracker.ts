@@ -61,7 +61,7 @@ export function run(argv: string[]): void {
 
   if (sub === 'list') {
     const where: string[] = []
-    const params: unknown[] = []
+    const params: (string | number)[] = []
     if (values.ambiguous) where.push('status_ambiguous = 1')
     if (values.status) {
       where.push('status = ?')

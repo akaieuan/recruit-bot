@@ -1,0 +1,73 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens lifted from his existing pipeline page so this reads as the same
+ * tool rather than a different one bolted on. Near-black rather than pure
+ * black, panels a step above the page, two line weights, and one accent per
+ * pipeline state.
+ */
+@theme {
+  --color-bg: #0b0b0c;
+  --color-panel: #131315;
+  --color-panel2: #18181b;
+  --color-line: #232326;
+  --color-line2: #2f2f35;
+  --color-fg: #ededef;
+  --color-dim: #8b8b93;
+  --color-dim2: #5f5f68;
+
+  --color-lead: #6b6b78;
+  --color-applied: #7aa8f0;
+  --color-viewed: #c9a86a;
+  --color-interview: #7dd3a0;
+  --color-closed: #a86b6b;
+
+  --font-sans: ui-sans-serif, -apple-system, 'SF Pro Text', Inter, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-panel: 8px;
+  --radius-chip: 7px;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 13.5px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-applied) 30%, transparent);
+  }
+
+  :focus-visible {
+    outline: 1px solid var(--color-line2);
+    outline-offset: 2px;
+  }
+
+  /* Numbers in tables should not shift as they change. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* The uppercase micro-label that separates sections on his pages. */
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+}

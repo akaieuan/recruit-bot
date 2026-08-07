@@ -15,20 +15,44 @@ export interface Board {
 /**
  * Boards confirmed to answer the public API. Everything else gets discovered
  * from job URLs in the tracker CSV or added by hand as it turns up.
+ *
+ * Ashby's board response carries no company name, only the token, so a display
+ * name is recorded here. Without one the pipeline shows "appliedlabs" where it
+ * means "Applied Labs".
  */
-export const SEED_BOARDS: { ats: 'ashby' | 'greenhouse'; token: string }[] = [
-  { ats: 'ashby', token: 'credal' },
-  { ats: 'ashby', token: 'sapien' },
-  { ats: 'ashby', token: 'tenexlabs' },
-  { ats: 'ashby', token: 'grow-therapy' },
-  { ats: 'ashby', token: 'probook' },
-  { ats: 'ashby', token: 'moment' },
+export const SEED_BOARDS: { ats: 'ashby' | 'greenhouse'; token: string; company: string }[] = [
+  { ats: 'ashby', token: 'credal', company: 'Credal' },
+  { ats: 'ashby', token: 'sapien', company: 'Sapien' },
+  { ats: 'ashby', token: 'tenexlabs', company: 'Tenex Labs' },
+  { ats: 'ashby', token: 'grow-therapy', company: 'Grow Therapy' },
+  { ats: 'ashby', token: 'probook', company: 'Probook' },
+  { ats: 'ashby', token: 'moment', company: 'Moment' },
   // The handoff records this as "applied-labs"; the live token has no hyphen.
-  { ats: 'ashby', token: 'appliedlabs' },
-  { ats: 'ashby', token: 'revin' },
-  { ats: 'ashby', token: 'krea' },
-  { ats: 'greenhouse', token: 'vts' },
+  { ats: 'ashby', token: 'appliedlabs', company: 'Applied Labs' },
+  { ats: 'ashby', token: 'revin', company: 'Revin' },
+  { ats: 'ashby', token: 'krea', company: 'Krea' },
+  { ats: 'greenhouse', token: 'vts', company: 'VTS' },
 ]
+
+/**
+ * Last resort when no display name is known: "grow-therapy" reads better as
+ * "Grow Therapy" than as itself, even though a single lowercase word cannot be
+ * split back into words.
+ */
+export function prettifyToken(token: string): string {
+  return token
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+export function companyForBoard(db: Db, ats: string, token: string): string {
+  const row = db.prepare('SELECT company FROM boards WHERE ats = ? AND board_token = ?').get(ats, token) as
+    | { company: string | null }
+    | undefined
+  return row?.company?.trim() || prettifyToken(token)
+}
 
 export function addBoard(db: Db, ats: 'ashby' | 'greenhouse', token: string, company?: string): boolean {
   const existing = db.prepare('SELECT id FROM boards WHERE ats = ? AND board_token = ?').get(ats, token)

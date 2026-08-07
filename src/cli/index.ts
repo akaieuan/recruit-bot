@@ -49,9 +49,11 @@ const COMMANDS: Record<string, { summary: string; run: Handler }> = {
   },
   status: {
     summary: '                                    what is in the pipeline and what to run next',
-    run: async (a) => (await import('./commands/status.ts')).run(a),
+    run: async () => (await import('./commands/status.ts')).run(),
   },
 }
+
+export {}
 
 function usage(): void {
   console.log('recruit-bot\n')

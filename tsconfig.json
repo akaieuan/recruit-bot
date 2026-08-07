@@ -12,6 +12,10 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // The CLI runs the .ts sources directly through tsx, so imports carry a
+    // .ts extension. Next resolves the same files through its own bundler.
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
     "incremental": true,
     "noEmit": true,
     "jsx": "preserve",
