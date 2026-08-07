@@ -1,0 +1,22 @@
+# Personal data never leaves this machine.
+# Everything under data/ is application history, drafts, the fact library,
+# cover letters, and the SQLite database. None of it is committed.
+data/
+
+# Belt and braces: no PDFs anywhere in the repo.
+*.pdf
+*.docx
+
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+*.log
