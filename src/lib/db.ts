@@ -12,7 +12,7 @@ import { PATHS } from './paths.ts'
  */
 export type Db = DatabaseSync
 
-const SCHEMA_VERSION = 1
+const SCHEMA_VERSION = 2
 
 let cached: Db | undefined
 
@@ -38,9 +38,36 @@ function migrate(db: Db): void {
   // always safe. Future migrations go in a switch below, keyed on `current`.
   db.exec(readFileSync(PATHS.schema, 'utf8'))
 
+  // v2 widened applications.source to accept 'linkedin' and 'inbox'. SQLite
+  // cannot alter a CHECK constraint, so the table is rebuilt in place.
+  if (current < 2) migrateSourceCheck(db)
+
   if (current < SCHEMA_VERSION) {
     db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`)
   }
+}
+
+function migrateSourceCheck(db: Db): void {
+  const sql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='applications'").get() as
+    | { sql: string }
+    | undefined
+  if (!sql || sql.sql.includes("'linkedin'")) return
+
+  db.exec('PRAGMA foreign_keys = OFF')
+  db.exec('BEGIN')
+  try {
+    db.exec(sql.sql.replace(/CREATE TABLE applications/i, 'CREATE TABLE applications_v2')
+      .replace("CHECK (source IN ('csv_import', 'pipeline', 'manual'))",
+               "CHECK (source IN ('csv_import', 'pipeline', 'manual', 'linkedin', 'inbox'))"))
+    db.exec('INSERT INTO applications_v2 SELECT * FROM applications')
+    db.exec('DROP TABLE applications')
+    db.exec('ALTER TABLE applications_v2 RENAME TO applications')
+    db.exec('COMMIT')
+  } catch (err) {
+    db.exec('ROLLBACK')
+    throw err
+  }
+  db.exec('PRAGMA foreign_keys = ON')
 }
 
 /** Runs fn inside a transaction, rolling back on any throw. */

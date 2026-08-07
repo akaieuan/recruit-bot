@@ -19,5 +19,28 @@ export async function run(argv: string[]): Promise<void> {
     return
   }
 
-  fail('usage: pnpm cli import <source|csv> [path]')
+  if (what === 'linkedin') {
+    const { readFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const { openDb } = await import('../../lib/db.ts')
+    const { PATHS } = await import('../../lib/paths.ts')
+    const { importLinkedin, unmatchedLocalRows } = await import('../../lib/linkedin.ts')
+
+    const file = positionals[1] ?? join(PATHS.source, 'linkedin-applied.json')
+    const rows = JSON.parse(readFileSync(file, 'utf8'))
+    const db = openDb()
+    const s = importLinkedin(db, rows)
+
+    console.log(`${s.rows} LinkedIn applications: ${s.inserted} new, ${s.matched} matched to existing rows`)
+    console.log(`  ${s.viewed} viewed or resume downloaded, ${s.closed} against postings that have since closed`)
+
+    const orphans = unmatchedLocalRows(db, rows)
+    if (orphans.length) {
+      console.log(`\n${orphans.length} tracker rows LinkedIn has no record of (applied direct, not through LinkedIn):`)
+      console.log('  ' + orphans.map((o) => o.company).join(', '))
+    }
+    return
+  }
+
+  fail('usage: pnpm cli import <source|csv|linkedin> [path]')
 }

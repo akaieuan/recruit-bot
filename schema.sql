@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS applications (
   notes                TEXT,
   follow_up_at         TEXT,
   followed_up_at       TEXT,
-  source               TEXT NOT NULL DEFAULT 'pipeline' CHECK (source IN ('csv_import', 'pipeline', 'manual')),
+  source               TEXT NOT NULL DEFAULT 'pipeline' CHECK (source IN ('csv_import', 'pipeline', 'manual', 'linkedin', 'inbox')),
   created_at           TEXT NOT NULL,
   updated_at           TEXT NOT NULL,
   UNIQUE (company, role, url)
