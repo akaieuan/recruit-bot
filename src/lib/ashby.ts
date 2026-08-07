@@ -1,4 +1,4 @@
-import { extractYears, remotePolicyFrom } from './normalize.ts'
+import { extractComp, extractYears, remotePolicyFrom } from './normalize.ts'
 import type { NormalizedPosting } from './types.ts'
 
 /**
@@ -63,7 +63,12 @@ export function normalizeAshbyJob(token: string, job: AshbyJob, company?: string
     job.location ??
     job.secondaryLocations?.map((l) => l.location).filter(Boolean).join(', ') ??
     null
-  const { min, max } = salaryFrom(job)
+  // Structured compensation first. Employers can publish a range in the body
+  // while leaving shouldDisplayCompensationOnJobPostings false, and reading
+  // only the structured field records those roles as paying nothing, which
+  // then trips the below-floor flag on a role that is well inside the band.
+  const structured = salaryFrom(job)
+  const { min, max } = structured.min !== null ? structured : extractComp(text)
   const years = extractYears(text)
 
   return {

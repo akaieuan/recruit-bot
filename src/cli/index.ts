@@ -39,6 +39,10 @@ const COMMANDS: Record<string, { summary: string; run: Handler }> = {
     summary: 'pdf --draft <id>                    render an approved cover letter to PDF',
     run: async (a) => (await import('./commands/render.ts')).run(a),
   },
+  apply: {
+    summary: '<postingId>                         prepare an application: files, answers, field plan',
+    run: async (a) => (await import('./commands/apply.ts')).run(a),
+  },
   tracker: {
     summary: 'list | followups | set              the application tracker',
     run: async (a) => (await import('./commands/tracker.ts')).run(a),
@@ -61,7 +65,7 @@ function usage(): void {
   for (const [name, { summary }] of Object.entries(COMMANDS)) {
     console.log(`  ${name.padEnd(10)} ${summary}`)
   }
-  console.log('\nA generated application is a draft, never a submission.')
+  console.log('\nForms get filled. Submit is his.')
 }
 
 const [command, ...rest] = process.argv.slice(2)

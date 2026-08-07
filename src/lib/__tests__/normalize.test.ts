@@ -1,7 +1,7 @@
 import { check, describe, eq } from './harness.ts'
 import { extractComp, extractYears, looksNyc, remotePolicyFrom } from '../normalize.ts'
 import { decodeEntities, htmlToText } from '../html.ts'
-import { salaryFrom } from '../ashby.ts'
+import { normalizeAshbyJob, salaryFrom } from '../ashby.ts'
 
 await describe('extractComp', () => {
   eq('plain range', extractComp('The salary range is $150,000 - $200,000 per year.'), { min: 150000, max: 200000 })
@@ -71,6 +71,33 @@ await describe('salaryFrom (ashby)', () => {
     { min: null, max: null },
   )
   eq('absent', salaryFrom({ id: 'x', title: 'y' }), { min: null, max: null })
+})
+
+await describe('ashby: comp stated in the body', () => {
+  // Probook publishes "$180K – $230K" in the description while leaving the
+  // structured compensation empty. Reading only the structured field recorded
+  // the role as paying nothing and flagged it as below the floor.
+  const job = {
+    id: 'a03afa74',
+    title: 'Founding Design Engineer',
+    workplaceType: 'OnSite',
+    location: 'Manhattan',
+    descriptionPlain: 'Compensation for this role is $180K – $230K plus meaningful equity.',
+    compensation: { summaryComponents: [] },
+  }
+  const p = normalizeAshbyJob('probook', job, 'Probook')
+  eq('falls back to the body', [p?.comp_min, p?.comp_max], [180000, 230000])
+
+  // Structured data still wins when it exists.
+  const both = normalizeAshbyJob('probook', {
+    ...job,
+    compensation: {
+      summaryComponents: [
+        { compensationType: 'Salary', interval: '1 YEAR', currencyCode: 'USD', minValue: 200000, maxValue: 250000 },
+      ],
+    },
+  })
+  eq('structured wins over the body', [both?.comp_min, both?.comp_max], [200000, 250000])
 })
 
 await describe('html', () => {

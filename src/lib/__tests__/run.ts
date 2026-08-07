@@ -7,7 +7,7 @@
  */
 import { state } from './harness.ts'
 
-const modules = ['./normalize.test.ts', './filter.test.ts', './csv.test.ts', './validate.test.ts', './layout.test.ts']
+const modules = ['./normalize.test.ts', './filter.test.ts', './csv.test.ts', './validate.test.ts', './layout.test.ts', './apply.test.ts']
 
 for (const m of modules) {
   await import(m)

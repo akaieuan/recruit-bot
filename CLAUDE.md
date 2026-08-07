@@ -18,11 +18,25 @@ The library also carries a `gaps` list of things he does not do. Never claim
 one, in any phrasing. The draft validator scans for them and refuses the
 submission, but the validator is a backstop, not the rule.
 
-**2. A generated application is a draft, never a submission.**
+**2. Nothing is sent without him saying so, per application.**
 
-This tool never fills in a form, never clicks apply, never sends an email. It
-produces a PDF and answer text for a human to read, edit, and submit. If you
-find yourself reaching for a browser to complete an application, stop.
+The tool fills forms and uploads files. It does not press submit.
+
+`pnpm cli apply <postingId>` assembles everything first: the resume, the
+rendered cover letter, and a value for every field it can resolve. Then, in a
+session with the browser, you fill the live form and upload the files. Then you
+**stop, show him what is in the form, and wait.** He presses submit, or tells
+you to.
+
+One confirmation per application, not per field. The point is that he is never
+surprised by something going out under his name, while still not retyping his
+own phone number forty times.
+
+Three things are never auto-answered, regardless:
+- **Compensation expectations.** A negotiating position, not a form field.
+- **Demographic and self-identification questions.** His to answer or decline.
+- **Any field with no honest value.** A missing phone number is reported as a
+  gap. It is never filled with something plausible.
 
 ## Voice
 
@@ -88,7 +102,25 @@ Titles reject; compensation and years only ever flag.
 
 ## Out of scope
 
-- Submitting applications, filling forms, or automating a browser against a job site
-- LinkedIn scraping or automation of any kind. Their ToS forbids it and account
-  restriction is a real outcome. The ATS APIs already provide discovery with no auth.
+- Pressing submit on his behalf without him saying so for that application.
+- LinkedIn scraping or automated activity. Their ToS forbids it and account
+  restriction is a real outcome. The ATS APIs already provide discovery with no
+  auth. Reading his own tracker in his own logged-in browser, with him present,
+  is fine; background polling of LinkedIn is not.
 - Inbox parsing (a later addition, not built)
+
+## Applying
+
+```bash
+pnpm cli apply <postingId>     # what will be filled, and what is still missing
+```
+
+It refuses to call itself ready while anything required is unresolved. Resolve
+those first: usually an unapproved cover letter, an undrafted answer, or a
+value missing from `data/profile.json`.
+
+When it is ready, open `applyUrl` in the browser, fill from the plan, upload
+the files, then stop and show him. He sends it.
+
+Ashby does not publish an application form schema, so its fields are read from
+the live page; Greenhouse's come from `?questions=true` and are known upfront.
