@@ -1,5 +1,6 @@
 import { openDb, plainAll, tx } from '../../lib/db.ts'
 import { evaluate } from '../../lib/filter.ts'
+import { supersedeManual } from '../../lib/postings.ts'
 import { args, plural, table } from '../util.ts'
 import type { Posting } from '../../lib/types.ts'
 
@@ -9,6 +10,9 @@ export function run(argv: string[]): void {
     dry: { type: 'boolean' },
   })
   const db = openDb()
+
+  // Retire hand-entered copies of roles that have since turned up on a board.
+  const superseded = values.dry ? 0 : supersedeManual(db)
 
   // Default to postings not yet triaged. --all re-runs the rules over
   // everything still open, which is what you want after editing filter.ts.
@@ -50,6 +54,7 @@ export function run(argv: string[]): void {
     }
   })
 
+  if (superseded) console.log(`${plural(superseded, 'hand-entered posting')} superseded by the real board listing\n`)
   console.log(`${plural(postings.length, 'posting')} filtered${values.dry ? ' (dry run, nothing written)' : ''}`)
   console.log(`  ${rejected} auto-rejected, ${survivors.length} to score, ${flaggedComp} flagged under the comp floor\n`)
 

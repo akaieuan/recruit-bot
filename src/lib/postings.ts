@@ -97,6 +97,30 @@ export function closeMissing(db: Db, ats: string, token: string, liveIds: string
   return n
 }
 
+/**
+ * A posting ingested from a saved list carries a title, a company and a link.
+ * Once the same role turns up on a real board it has a description, a salary
+ * and a form, so the hand-entered copy is retired rather than left to show up
+ * twice in the queue. Anything already drafted or applied to is left alone.
+ */
+export function supersedeManual(db: Db): number {
+  const { changes } = db
+    .prepare(
+      `UPDATE postings SET stage = 'skipped', stage_reason = 'superseded by the posting on the company board'
+       WHERE ats = 'manual'
+         AND stage NOT IN ('needs_draft', 'in_review', 'approved', 'applied', 'skipped')
+         AND EXISTS (
+           SELECT 1 FROM postings live
+           WHERE live.ats != 'manual'
+             AND live.closed_at IS NULL
+             AND lower(live.company) = lower(postings.company)
+             AND lower(live.role_title) = lower(postings.role_title)
+         )`,
+    )
+    .run()
+  return Number(changes)
+}
+
 export function getPosting(db: Db, id: number): Posting | undefined {
   const row = db.prepare('SELECT * FROM postings WHERE id = ?').get(id)
   return row ? plain<Posting>(row) : undefined

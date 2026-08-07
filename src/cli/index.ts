@@ -39,6 +39,10 @@ const COMMANDS: Record<string, { summary: string; run: Handler }> = {
     summary: 'pdf --draft <id>                    render an approved cover letter to PDF',
     run: async (a) => (await import('./commands/render.ts')).run(a),
   },
+  ingest: {
+    summary: '<file.json>                          bring in postings found outside a polled board',
+    run: async (a) => (await import('./commands/ingest.ts')).run(a),
+  },
   apply: {
     summary: '<postingId>                         prepare an application: files, answers, field plan',
     run: async (a) => (await import('./commands/apply.ts')).run(a),
