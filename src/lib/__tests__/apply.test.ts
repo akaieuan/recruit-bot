@@ -11,7 +11,7 @@ const PROFILE: Profile = {
   linkedin: 'https://linkedin.com/in/ieuan-king', github: 'https://github.com/akaieuan',
   portfolio: 'https://akabuild.dev', website: 'https://akaoss.dev',
   work_authorized: true, requires_sponsorship: false, work_authorization_note: 'U.S. citizen.',
-  over_18: true, willing_onsite: true, heard_about_us: 'LinkedIn',
+  over_18: true, willing_onsite: true, heard_about_us: 'LinkedIn', current_company: 'Independent',
   citizenships: ['United States', 'United Kingdom'], willing_to_relocate: true,
   demographics: {
     pronouns: 'he/him/his', gender: 'Male', race: 'White', hispanic_latino: false,
@@ -66,6 +66,7 @@ await describe('apply: never answers for him', () => {
 
   // He gave a standing answer, so this stopped being a gap handed back to him.
   eq('referral source uses his standing answer', (r(f('How did you hear about this job?')) as { value: string }).value, 'LinkedIn')
+  eq('current company is always Independent', (r(f('Current Company')) as { value: string }).value, 'Independent')
 })
 
 await describe('apply: demographics only when the form insists', () => {

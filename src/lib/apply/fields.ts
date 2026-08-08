@@ -94,6 +94,7 @@ export function resolveField({ field, profile, answers = {}, files = {} }: MapAr
   // name into a Yes/No dropdown.
   const direct: [RegExp, string | boolean | null][] = [
     [/\bhow did you hear\b|\bhow did you find\b|\bsource\b/, profile.heard_about_us ?? null],
+    [/\bcurrent (company|employer)\b|\bpresent employer\b|\bwhere do you work\b/, profile.current_company ?? null],
     [/\b(legally|lawfully)?\s*(authori[sz]ed|eligible) to work\b|\bwork authori[sz]ation\b|\bright to work\b/, profile.work_authorized],
     [/\bsponsorship\b|\bvisa\b/, profile.requires_sponsorship],
     [/\b18 years\b|\bat least 18\b|\bage of 18\b/, profile.over_18],

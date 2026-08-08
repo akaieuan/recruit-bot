@@ -31,6 +31,8 @@ export interface Profile {
   over_18: boolean | null
   /** Standing answer for the "how did you hear about us" field. */
   heard_about_us?: string | null
+  /** Always "Independent". He runs akaOSS solo; no employer to name. */
+  current_company?: string | null
   /** US and UK, so neither country needs sponsorship. */
   citizenships?: string[]
   /** Will move for the right role: anywhere in the US, or London. */
@@ -86,6 +88,7 @@ const DEFAULT_PROFILE: Profile = {
   over_18: true,
   willing_onsite: true,
   heard_about_us: 'LinkedIn',
+  current_company: 'Independent',
   citizenships: ['United States', 'United Kingdom'],
   willing_to_relocate: true,
   resume_path: 'data/Ieuan King - Resume 2026.pdf',
