@@ -1,32 +1,40 @@
 @import 'tailwindcss';
 
 /*
- * Tokens lifted from his existing pipeline page so this reads as the same
- * tool rather than a different one bolted on. Near-black rather than pure
- * black, panels a step above the page, two line weights, and one accent per
- * pipeline state.
+ * The ramp is the one akaOSS and akabuild already share: a warm near-black
+ * page, two surfaces above it, and edges drawn as white at low alpha rather
+ * than a fixed grey, so a panel stacked on a panel still shows its edge.
+ *
+ * Status colours are that same accent set. They stay semantic: one per
+ * pipeline state, never spent on decoration.
  */
 @theme {
-  --color-bg: #0b0b0c;
-  --color-panel: #131315;
-  --color-panel2: #18181b;
-  --color-line: #232326;
-  --color-line2: #2f2f35;
-  --color-fg: #ededef;
-  --color-dim: #8b8b93;
-  --color-dim2: #5f5f68;
+  --color-bg: #0a0a09;
+  --color-panel: #111110;
+  --color-panel2: #171715;
+  --color-panel3: #1e1e1b;
 
-  --color-lead: #6b6b78;
-  --color-applied: #7aa8f0;
-  --color-viewed: #c9a86a;
-  --color-interview: #7dd3a0;
-  --color-closed: #a86b6b;
+  --color-line: rgb(255 255 255 / 0.07);
+  --color-line2: rgb(255 255 255 / 0.15);
 
-  --font-sans: ui-sans-serif, -apple-system, 'SF Pro Text', Inter, system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-fg: #ededea;
+  /* Both greys clear 4.5:1 on the page colour. The previous pair did not, and
+     a review tool whose secondary text has to be squinted at is not reviewed. */
+  --color-dim: #9b9b96;
+  --color-dim2: #7a7a75;
 
-  --radius-panel: 8px;
-  --radius-chip: 7px;
+  --color-lead: #6f6f6a;
+  --color-applied: #5d98f3;
+  --color-viewed: #f0be67;
+  --color-interview: #69b57f;
+  --color-closed: #ec7380;
+
+  --font-sans: Inter, ui-sans-serif, -apple-system, 'SF Pro Text', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-panel: 12px;
+  --radius-card: 14px;
+  --radius-chip: 8px;
 }
 
 @layer base {
@@ -42,7 +50,7 @@
     background: var(--color-bg);
     color: var(--color-fg);
     font-family: var(--font-sans);
-    font-size: 13.5px;
+    font-size: 14px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
   }
@@ -52,22 +60,67 @@
   }
 
   :focus-visible {
-    outline: 1px solid var(--color-line2);
+    outline: 1px solid var(--color-dim2);
     outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+@layer components {
+  /*
+   * The uppercase micro-label that separates sections on his sites. Mono,
+   * because it names a thing rather than saying something, and the difference
+   * should be legible before the words are read.
+   */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 500;
   }
 
   /* Numbers in tables should not shift as they change. */
   .tabular {
     font-variant-numeric: tabular-nums;
   }
-}
 
-@layer components {
-  /* The uppercase micro-label that separates sections on his pages. */
-  .eyebrow {
-    font-size: 10px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    font-weight: 600;
+  /*
+   * Wide tables scroll here, never on the body. The two right-edge gradients
+   * are the affordance: the first is painted with the content so it slides
+   * away once you reach the end, uncovering the second, which is fixed to the
+   * shell. No shadow means no more columns.
+   */
+  .scroll-x {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    background:
+      linear-gradient(to left, var(--color-panel) 42%, transparent) right center / 48px 100% no-repeat
+        local,
+      linear-gradient(to left, rgb(0 0 0 / 0.55), transparent) right center / 26px 100% no-repeat scroll,
+      var(--color-panel);
+  }
+
+  /* macOS hides overlay scrollbars until they move, which is exactly when a
+     sideways-scrolling table needs to advertise itself. This one stays put. */
+  .scroll-x::-webkit-scrollbar {
+    height: 10px;
+  }
+
+  .scroll-x::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scroll-x::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 0.13);
+    background-clip: padding-box;
+    border: 3px solid transparent;
+    border-radius: 999px;
+  }
+
+  .scroll-x:hover::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 0.24);
+    background-clip: padding-box;
   }
 }

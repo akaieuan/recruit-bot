@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/ui'
-import { ChevronGlyph } from './glyphs'
+import { ChevronGlyph } from './primitives'
 
 /**
  * The opening paragraph always shows and the rest sits in a native <details>,

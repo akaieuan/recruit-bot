@@ -5,15 +5,38 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/ui'
 
 /**
- * The two views answer different questions, and not saying so is what made
- * them confusing. Pipeline is work in progress toward an application; Tracker
- * is everything already sent. The subtitle under the active tab states it.
+ * The two main views answer different questions, and not saying so is what
+ * made them confusing. Pipeline is work in progress toward an application;
+ * Tracker is everything already sent.
+ *
+ * Each view gets a real page title rather than a caption under a tab bar. A
+ * table hanging directly off the chrome never says what it is a table of.
  */
 const VIEWS = [
-  { href: '/', label: 'Pipeline', blurb: 'Roles being worked toward an application' },
-  { href: '/tracker', label: 'Tracker', blurb: 'Everything already sent, and what came back' },
-  { href: '/prep', label: 'Prep', blurb: 'Interview sheets: the angle, the vocabulary, and where he is weakest' },
-  { href: '/facts', label: 'Facts', blurb: 'What may be claimed, and what never can' },
+  {
+    href: '/',
+    label: 'Pipeline',
+    kicker: 'Work in progress',
+    blurb: 'Roles being worked toward an application, in the order they need you.',
+  },
+  {
+    href: '/tracker',
+    label: 'Tracker',
+    kicker: 'Already sent',
+    blurb: 'Everything that has gone out, and what came back.',
+  },
+  {
+    href: '/prep',
+    label: 'Prep',
+    kicker: 'Interview sheets',
+    blurb: 'The angle, the vocabulary, and where he is weakest.',
+  },
+  {
+    href: '/facts',
+    label: 'Facts',
+    kicker: 'The library',
+    blurb: 'What may be claimed, and what never can.',
+  },
 ]
 
 export function Nav() {
@@ -21,18 +44,18 @@ export function Nav() {
   const active = VIEWS.find((v) => (v.href === '/' ? pathname === '/' : pathname.startsWith(v.href))) ?? VIEWS[0]!
 
   return (
-    <header className="border-b border-line pb-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-baseline gap-3">
-          <Link href="/" className="text-[15px] font-semibold tracking-[-0.01em] text-fg">
+    <header>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 items-baseline gap-3">
+          <Link href="/" className="text-[15px] font-medium tracking-[-0.02em] text-fg">
             recruit<span className="text-dim2">-</span>bot
           </Link>
-          <span className="hidden text-[11.5px] text-dim2 sm:inline">
-            discovery, triage and first drafts. nothing is sent without you.
+          <span className="hidden font-mono text-[10.5px] text-dim2 md:inline">
+            nothing is sent without you
           </span>
         </div>
 
-        <nav className="flex gap-0.5 rounded-[8px] border border-line bg-panel p-0.5">
+        <nav aria-label="Views" className="flex gap-0.5 rounded-chip border border-line bg-panel p-0.5">
           {VIEWS.map((v) => {
             const isActive = v.href === active.href
             return (
@@ -42,7 +65,7 @@ export function Nav() {
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'rounded-[6px] px-3 py-1.5 text-[12px] transition-colors',
-                  isActive ? 'bg-panel2 text-fg' : 'text-dim hover:text-fg',
+                  isActive ? 'bg-panel3 text-fg' : 'text-dim hover:text-fg',
                 )}
               >
                 {v.label}
@@ -52,7 +75,13 @@ export function Nav() {
         </nav>
       </div>
 
-      <p className="mt-2 text-[12px] text-dim">{active.blurb}</p>
+      <div className="mt-8 border-b border-line pb-6">
+        <p className="eyebrow text-dim2">{active.kicker}</p>
+        <h1 className="mt-2.5 text-[26px] font-light leading-none tracking-[-0.03em] text-fg">
+          {active.label}
+        </h1>
+        <p className="mt-2.5 max-w-[64ch] text-[13px] text-dim">{active.blurb}</p>
+      </div>
     </header>
   )
 }
