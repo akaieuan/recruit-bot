@@ -27,8 +27,11 @@ export function normalizeStatus(raw: string): { status: ApplicationStatus; ambig
   if (s.includes('no response') || s.includes('no reply') || s.includes('ghosted')) {
     return { status: 'no_response', ambiguous: false }
   }
-  // "Applied - in progress" means the conversation is live.
-  if (s.includes('applied') && s.includes('progress')) return { status: 'interviewing', ambiguous: false }
+  // "Applied - in progress" says something is moving, not that anyone has
+  // spoken to him. Reading it as an interview puts a stage in the tracker he
+  // never reached, so it lands on in_progress and gets flagged for him to
+  // confirm.
+  if (s.includes('applied') && s.includes('progress')) return { status: 'in_progress', ambiguous: true }
   if (s.includes('applied')) return { status: 'applied', ambiguous: false }
   // "In progress" on its own could mean the application is mid-flight or the
   // draft is. Flagged for one-time confirmation rather than guessed at.

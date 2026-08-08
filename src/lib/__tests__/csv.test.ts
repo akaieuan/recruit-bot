@@ -28,7 +28,10 @@ await describe('csv round trip', () => {
 await describe('status normalization', () => {
   eq('applied', normalizeStatus('Applied').status, 'applied')
   eq('no response', normalizeStatus('Applied - no response').status, 'no_response')
-  eq('applied in progress means interviewing', normalizeStatus('Applied - in progress').status, 'interviewing')
+  // "Applied - in progress" says something is moving, not that anyone has
+  // spoken to him. It must not become an interview he never had.
+  eq('applied in progress is not an interview', normalizeStatus('Applied - in progress').status, 'in_progress')
+  check('and is flagged to confirm', normalizeStatus('Applied - in progress').ambiguous)
   eq('rejected regardless of case', normalizeStatus('REJECTED').status, 'rejected')
   eq('do not apply', normalizeStatus('DO NOT APPLY').status, 'do_not_apply')
   eq('unknown sentinel', normalizeStatus('Unknown - confirm').status, 'unknown')
