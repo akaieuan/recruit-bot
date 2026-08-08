@@ -106,6 +106,10 @@ await describe('filter: title rejects', () => {
     ['Brand/Graphic Designer', 'adjacent design'],
     ['Rive Motion Designer and Animator (Contract)', 'adjacent design'],
     ['Art Director', 'management'],
+    ['Technical Interns and New Grads', 'junior'],
+    ['Design Interns', 'junior'],
+    ['Associates, Product', 'junior'],
+    ['GTM Systems Administrator', 'non-design'],
   ]
   for (const [title] of rejects) {
     const v = verdict(title)

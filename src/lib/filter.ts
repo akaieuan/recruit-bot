@@ -41,7 +41,9 @@ export const TITLE_REJECT: { reason: string; re: RegExp }[] = [
   {
     // Overqualification reads as flight risk, and the level argues down.
     reason: 'junior or associate level',
-    re: /\b(product\s+)?designer\s*(i|1)\b|\b(associate|junior|jr\.?|intern(ship)?|entry[- ]level|apprentice|new\s+grad)\b/i,
+    // Plurals matter: "Technical Interns and New Grads" slipped past
+    // \bintern\b and \bnew grad\b because the trailing s killed the boundary.
+    re: /\b(product\s+)?designer\s*(i|1)\b|\b(associates?|juniors?|jr\.?|intern(ship)?s?|entry[- ]level|apprentices?|new\s+grads?)\b/i,
   },
   {
     // He has never managed a design team and will not claim to. "Head of" and
@@ -101,7 +103,7 @@ export const TITLE_REJECT: { reason: string; re: RegExp }[] = [
   },
   {
     reason: 'not a design or engineering role',
-    re: /\b(account\s+(executive|manager)|sales|business\s+development|bd\b|revenue|recruit(er|ing)|talent|people\s+ops|hr\b|marketing|marketer|abm\b|finance|accountant|accounting|controller|legal|counsel|compliance|customer\s+success|client\s+success|customer\s+support|assistant|ambassador|expert|investigator|booker|office\s+manager|coordinator|representative|specialist|partnerships)/i,
+    re: /\b(account\s+(executive|manager)|sales|business\s+development|bd\b|revenue|recruit(er|ing)|talent|people\s+ops|hr\b|marketing|marketer|abm\b|finance|accountant|accounting|controller|legal|counsel|compliance|customer\s+success|client\s+success|customer\s+support|assistant|ambassador|expert|investigator|booker|office\s+manager|coordinator|representative|specialist|administrator|partnerships)/i,
   },
   {
     // Generic pipeline reqs with no role attached.
