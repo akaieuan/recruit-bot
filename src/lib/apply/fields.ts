@@ -41,7 +41,6 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 const NEVER_FILL: { re: RegExp; reason: string; demographic?: boolean }[] = [
   { re: /\b(gender|pronouns?|races?|ethnicit\w*|veterans?|disabilit\w*|hispanic|latino|lgbtq?\w*|sexual orientation|self identif\w*|demographics?)\b/, reason: 'demographic question, optional, left blank', demographic: true },
   { re: /\b(salary|compensation|pay expectation|desired pay|expected pay|rate expectation)\b/, reason: 'compensation is his call, never auto-filled' },
-  { re: /\b(how did you hear|referr?al|referred by)\b/, reason: 'source attribution, needs his answer' },
 ]
 
 interface MapArgs {
@@ -94,6 +93,7 @@ export function resolveField({ field, profile, answers = {}, files = {} }: MapAr
   // contains "country", and a generic rule reaching it first put a country
   // name into a Yes/No dropdown.
   const direct: [RegExp, string | boolean | null][] = [
+    [/\bhow did you hear\b|\bhow did you find\b|\bsource\b/, profile.heard_about_us ?? null],
     [/\b(legally|lawfully)?\s*(authori[sz]ed|eligible) to work\b|\bwork authori[sz]ation\b|\bright to work\b/, profile.work_authorized],
     [/\bsponsorship\b|\bvisa\b/, profile.requires_sponsorship],
     [/\b18 years\b|\bat least 18\b|\bage of 18\b/, profile.over_18],

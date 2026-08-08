@@ -29,6 +29,8 @@ export interface Profile {
   requires_sponsorship: boolean | null
   work_authorization_note: string | null
   over_18: boolean | null
+  /** Standing answer for the "how did you hear about us" field. */
+  heard_about_us?: string | null
   /** US and UK, so neither country needs sponsorship. */
   citizenships?: string[]
   /** Will move for the right role: anywhere in the US, or London. */
@@ -83,6 +85,7 @@ const DEFAULT_PROFILE: Profile = {
   work_authorization_note: 'U.S. citizen.',
   over_18: true,
   willing_onsite: true,
+  heard_about_us: 'LinkedIn',
   citizenships: ['United States', 'United Kingdom'],
   willing_to_relocate: true,
   resume_path: 'data/Ieuan King - Resume 2026.pdf',
