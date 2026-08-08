@@ -10,6 +10,10 @@ const PROFILE: Profile = {
   portfolio: 'https://akabuild.dev', website: 'https://akaoss.dev',
   work_authorized: true, requires_sponsorship: false, work_authorization_note: 'U.S. citizen.',
   over_18: true, willing_onsite: true,
+  demographics: {
+    pronouns: 'he/him/his', gender: 'Male', race: 'White', hispanic_latino: false,
+    veteran_status: 'I am not a protected veteran', disability_status: 'No, I do not have a disability',
+  },
   resume_path: 'data/resume.pdf', portfolio_path: null, notes: [], confirm: [],
 }
 
@@ -58,6 +62,35 @@ await describe('apply: never answers for him', () => {
   check('and says why', (comp as { reason: string }).reason.includes('his call'))
 
   eq('skips referral source', r(f('How did you hear about this job?')).action, 'skip')
+})
+
+await describe('apply: demographics only when the form insists', () => {
+  // Voluntary by design, so an optional one stays blank even though the
+  // answer is on file.
+  for (const label of ['What are your pronouns?', 'Gender', 'Race / Ethnicity']) {
+    eq(`optional "${label}" stays blank`, r(f(label, 'input_text', { required: false })).action, 'skip')
+    eq(`unspecified "${label}" stays blank`, r(f(label)).action, 'skip')
+  }
+
+  // A form that will not submit without one gets the answer he gave.
+  eq('required pronouns', (r(f('What are your pronouns?', 'input_text', { required: true })) as { value: string }).value, 'he/him/his')
+  eq('required gender', (r(f('Gender', 'input_text', { required: true })) as { value: string }).value, 'Male')
+  eq('required race', (r(f('Race / Ethnicity', 'input_text', { required: true })) as { value: string }).value, 'White')
+  eq(
+    'required veteran status',
+    (r(f('Are you a protected veteran?', 'input_text', { required: true })) as { value: string }).value,
+    'I am not a protected veteran',
+  )
+  eq(
+    'required disability status',
+    (r(f('Voluntary Self-Identification of Disability', 'input_text', { required: true })) as { value: string }).value,
+    'No, I do not have a disability',
+  )
+  eq(
+    'required hispanic/latino maps to the option list',
+    (r(f('Are you Hispanic or Latino?', 'multi_value_single_select', { required: true, options: ['Yes', 'No'] })) as { value: string }).value,
+    'No',
+  )
 })
 
 await describe('apply: option-constrained fields', () => {

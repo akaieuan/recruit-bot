@@ -31,6 +31,19 @@ export interface Profile {
   over_18: boolean | null
   /** He wants in-person; 4 to 5 days onsite is a positive signal, not a cost. */
   willing_onsite: boolean | null
+  /**
+   * Answered only when a form makes them required. Left blank otherwise,
+   * which is nearly always: these questions exist to be voluntary, and
+   * answering an optional one on his behalf is a choice that is his to make.
+   */
+  demographics?: {
+    pronouns?: string
+    gender?: string
+    race?: string
+    hispanic_latino?: boolean
+    veteran_status?: string
+    disability_status?: string
+  }
   /** Files uploaded to the form. Paths are relative to the repo root. */
   resume_path: string
   portfolio_path: string | null

@@ -38,8 +38,8 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
  * answer or decline, and a compensation number is a negotiating position, not
  * a data-entry task.
  */
-const NEVER_FILL: { re: RegExp; reason: string }[] = [
-  { re: /\b(gender|pronouns?|races?|ethnicit\w*|veterans?|disabilit\w*|hispanic|latino|lgbtq?\w*|sexual orientation|self identif\w*|demographics?)\b/, reason: 'demographic question, left for him' },
+const NEVER_FILL: { re: RegExp; reason: string; demographic?: boolean }[] = [
+  { re: /\b(gender|pronouns?|races?|ethnicit\w*|veterans?|disabilit\w*|hispanic|latino|lgbtq?\w*|sexual orientation|self identif\w*|demographics?)\b/, reason: 'demographic question, optional, left blank', demographic: true },
   { re: /\b(salary|compensation|pay expectation|desired pay|expected pay|rate expectation)\b/, reason: 'compensation is his call, never auto-filled' },
   { re: /\b(how did you hear|referr?al|referred by)\b/, reason: 'source attribution, needs his answer' },
 ]
@@ -59,7 +59,15 @@ export function resolveField({ field, profile, answers = {}, files = {} }: MapAr
   const hay = `${label} ${name}`
 
   for (const rule of NEVER_FILL) {
-    if (rule.re.test(hay)) return { action: 'skip', reason: rule.reason, field }
+    if (!rule.re.test(hay)) continue
+    // Demographic questions are voluntary by design, so an optional one stays
+    // blank. A form that insists gets the answer he supplied, rather than
+    // leaving him unable to submit.
+    if (rule.demographic && field.required === true) {
+      const value = demographicAnswer(hay, profile)
+      if (value !== null) return coerce(value, field, 'his stated answer, required by this form')
+    }
+    return { action: 'skip', reason: rule.reason, field }
   }
 
   // An approved draft answer, matched on the exact question key, wins over
@@ -154,6 +162,18 @@ function coerce(value: string | boolean, field: DetectedField, source: string): 
     reason: `"${String(value)}" is not one of the allowed options (${options.slice(0, 4).join(', ')})`,
     field,
   }
+}
+
+function demographicAnswer(hay: string, profile: Profile): string | boolean | null {
+  const d = profile.demographics
+  if (!d) return null
+  if (/pronoun/.test(hay)) return d.pronouns ?? null
+  if (/hispanic|latino/.test(hay)) return d.hispanic_latino ?? null
+  if (/veteran/.test(hay)) return d.veteran_status ?? null
+  if (/disabilit/.test(hay)) return d.disability_status ?? null
+  if (/race|ethnicit/.test(hay)) return d.race ?? null
+  if (/gender|\bsex\b/.test(hay)) return d.gender ?? null
+  return null
 }
 
 export function summarize(resolutions: Resolution[]) {
