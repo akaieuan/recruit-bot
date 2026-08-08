@@ -153,10 +153,37 @@ export function postingDetail(id: number): PostingDetail | null {
 export function pipelineSummary() {
   const db = openDb()
   const counts = stageCounts(db)
-  const apps = (db.prepare('SELECT count(*) AS n FROM applications').get() as { n: number }).n
-  const awaiting = (db.prepare("SELECT count(*) AS n FROM applications WHERE status = 'applied'").get() as { n: number }).n
-  const unknown = (db.prepare("SELECT count(*) AS n FROM applications WHERE status = 'unknown'").get() as { n: number }).n
-  return { counts, apps, awaiting, unknown, followUps: dueFollowUps(db).length }
+  const one = (sql: string) => (db.prepare(sql).get() as { n: number }).n
+
+  // "Movement" is the only number here that implies an action. An employer who
+  // opened the application or downloaded the resume has done something; every
+  // other row is silence.
+  return {
+    counts,
+    apps: one('SELECT count(*) AS n FROM applications'),
+    awaiting: one("SELECT count(*) AS n FROM applications WHERE status = 'applied'"),
+    unknown: one("SELECT count(*) AS n FROM applications WHERE status = 'unknown'"),
+    interviewing: one("SELECT count(*) AS n FROM applications WHERE status IN ('interviewing', 'in_progress')"),
+    movement: one("SELECT count(*) AS n FROM applications WHERE notes LIKE '%viewed%' OR notes LIKE '%downloaded%'"),
+    rejected: one("SELECT count(*) AS n FROM applications WHERE status = 'rejected'"),
+    active: (['needs_score', 'scored', 'needs_research', 'researched', 'needs_draft', 'in_review', 'approved'] as Stage[])
+      .reduce((sum, st) => sum + (counts[st] ?? 0), 0),
+    toReview: counts.in_review ?? 0,
+    followUps: dueFollowUps(db).length,
+  }
+}
+
+/** Applications where the employer has actually done something. */
+export function movementRows(): Application[] {
+  return plainAll<Application>(
+    openDb()
+      .prepare(
+        `SELECT * FROM applications
+         WHERE notes LIKE '%viewed%' OR notes LIKE '%downloaded%'
+         ORDER BY (applied_at IS NULL), applied_at DESC LIMIT 40`,
+      )
+      .all(),
+  )
 }
 
 export function trackerRows(filter?: string): Application[] {

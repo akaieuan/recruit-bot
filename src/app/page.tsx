@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { pipelineSummary, queueRows } from '@/lib/views'
 import { StageFilter } from '@/components/stage-filter'
+import { Stat, StatRow } from '@/components/ui/stat'
 import { Dot } from '@/components/ui/badge'
 import { cn, formatComp, STAGE_STYLE, TIER_STYLE } from '@/lib/ui'
 import type { Stage } from '@/lib/types'
@@ -19,26 +20,27 @@ export default async function PipelinePage({
 
   return (
     <main>
-      <StageFilter counts={summary.counts} current={current} />
+      <StatRow>
+        <Stat label="In play" value={summary.active} hint="roles being worked" accent="bg-applied" />
+        <Stat
+          label="Your review"
+          value={summary.toReview}
+          hint={summary.toReview ? 'drafts waiting on you' : 'nothing waiting'}
+          accent="bg-viewed"
+          emphasis={summary.toReview > 0}
+        />
+        <Stat label="Sent" value={summary.apps} hint="applications on record" href="/tracker" accent="bg-dim2" />
+        <Stat label="Movement" value={summary.movement} hint="viewed or downloaded" href="/tracker" accent="bg-interview" />
+        <Stat
+          label="Follow-ups due"
+          value={summary.followUps}
+          hint="seven days, no reply"
+          href="/tracker?filter=followups"
+          accent="bg-closed"
+        />
+      </StatRow>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-dim">
-        <span>
-          <b className="tabular font-semibold text-fg">{summary.apps}</b> applications tracked
-        </span>
-        <span>
-          <b className="tabular font-semibold text-fg">{summary.awaiting}</b> awaiting a reply
-        </span>
-        {summary.followUps > 0 && (
-          <Link href="/tracker?filter=followups" className="text-viewed hover:underline">
-            {summary.followUps} follow-up{summary.followUps === 1 ? '' : 's'} due
-          </Link>
-        )}
-        {summary.unknown > 0 && (
-          <Link href="/tracker?filter=unknown" className="hover:text-fg hover:underline">
-            {summary.unknown} needing an outcome
-          </Link>
-        )}
-      </div>
+      <StageFilter counts={summary.counts} current={current} />
 
       {rows.length === 0 ? (
         <Empty />
