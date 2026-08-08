@@ -94,10 +94,11 @@ export function resolveField({ field, profile, answers = {}, files = {} }: MapAr
   // contains "country", and a generic rule reaching it first put a country
   // name into a Yes/No dropdown.
   const direct: [RegExp, string | boolean | null][] = [
-    [/\b(legally|lawfully)?\s*(authori[sz]ed|eligible) to work\b|\bwork authori[sz]ation\b/, profile.work_authorized],
+    [/\b(legally|lawfully)?\s*(authori[sz]ed|eligible) to work\b|\bwork authori[sz]ation\b|\bright to work\b/, profile.work_authorized],
     [/\bsponsorship\b|\bvisa\b/, profile.requires_sponsorship],
     [/\b18 years\b|\bat least 18\b|\bage of 18\b/, profile.over_18],
     [/\b(come|coming|commute|work) (in)?to the .*office\b|\bdays a week\b|\bon ?site\b|\bin ?person\b|\bhybrid\b/, profile.willing_onsite],
+    [/\brelocat\w*\b|\bwilling to move\b/, profile.willing_to_relocate ?? null],
     [/\bfirst name\b|\bgiven name\b|^first$/, profile.first_name],
     [/\blast name\b|\bsurname\b|\bfamily name\b|^last$/, profile.last_name],
     [/\bfull name\b|^name$/, profile.full_name],

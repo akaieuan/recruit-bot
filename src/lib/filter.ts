@@ -1,4 +1,4 @@
-import { looksNonUs, looksNyc } from './normalize.ts'
+import { locationFit, looksNyc, type LocationFit } from './normalize.ts'
 import type { NormalizedPosting, Posting } from './types.ts'
 
 /**
@@ -125,6 +125,8 @@ export interface FilterVerdict {
   yearsFlag: string | null
   keywordHits: string[]
   allowMatch: string | null
+  /** null when it is in New York; otherwise what taking it would involve. */
+  relocation: string | null
 }
 
 type FilterInput = Pick<
@@ -133,19 +135,29 @@ type FilterInput = Pick<
 > & { location?: string | null; remote_policy?: string | null }
 
 /**
- * He is in Brooklyn and wants in-person or hybrid, so a role anchored to
- * another city is out regardless of how good it looks. Remote survives (a
- * weaker fit, not a disqualifier) and so does an unstated location, because
- * absence of information is not evidence of a bad location.
+ * Location only rejects where he could not take the job.
+ *
+ * He is in New York and prefers onsite there, but holds US and UK citizenship
+ * and is open to relocating anywhere in the US or to London for the right
+ * role. So a San Francisco or London posting is a real option and stays in,
+ * carrying a flag that says it would mean moving. Somewhere he would need a
+ * visa is out, unless the role is remote and anchored where he can work.
  */
 export function outsideNyc(location: string | null | undefined, remotePolicy: string | null | undefined): boolean {
   if (!location?.trim()) return false
-  // Multi-city postings list every office, so one NYC mention is enough.
-  if (looksNyc(location)) return false
-  // Remote rescues a role only when it is anchored in the US. A globally
-  // remote req based abroad is not a real option from Brooklyn.
-  if (remotePolicy === 'remote') return looksNonUs(location)
-  return true
+  const fit = locationFit(location)
+  if (fit === 'elsewhere') return true
+  return false
+}
+
+/** Says what accepting this role would actually involve. */
+export function relocationFlag(location: string | null | undefined, remotePolicy: string | null | undefined): string | null {
+  const fit: LocationFit = locationFit(location)
+  if (fit === 'nyc' || fit === 'unknown') return null
+  if (remotePolicy === 'remote') return 'remote'
+  if (fit === 'uk') return 'relocate_uk'
+  if (fit === 'us') return 'relocate_us'
+  return null
 }
 
 export function evaluate(posting: FilterInput): FilterVerdict {
@@ -160,7 +172,7 @@ export function evaluate(posting: FilterInput): FilterVerdict {
   // Location rejects even an allowlisted title: a Design Engineer role in
   // Seoul is still a Design Engineer role in Seoul.
   if (!reject && outsideNyc(posting.location, posting.remote_policy)) {
-    reject = { reason: 'outside the NYC metro', re: /(?:)/, bare: true }
+    reject = { reason: 'somewhere he would need a visa', re: /(?:)/, bare: true }
   }
 
   // A posted maximum below the floor is the real signal: a low minimum with a
@@ -175,6 +187,7 @@ export function evaluate(posting: FilterInput): FilterVerdict {
     reason: reject ? (reject.bare ? reject.reason : `title: ${reject.reason}`) : null,
     compFlag,
     yearsFlag: yearsFlag(posting.years_min ?? null, posting.years_max ?? null),
+    relocation: relocationFlag(posting.location, posting.remote_policy),
     keywordHits: [...new Set(keywordHits)],
     allowMatch: allow?.name ?? null,
   }

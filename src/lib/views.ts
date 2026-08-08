@@ -21,6 +21,21 @@ export interface QueueRow {
   keywordHits: string[]
 }
 
+/**
+ * NYC and in person first, always. He will relocate for the right role, but
+ * the right role in New York beats the same role somewhere he would have to
+ * move to, and a ranking that buries the local ones is a ranking that argues
+ * against what he actually wants.
+ */
+const LOCATION_ORDER = `
+  CASE
+    WHEN p.location LIKE '%New York%' OR p.location LIKE '%NYC%' OR p.location LIKE '%Brooklyn%' OR p.location LIKE '%Manhattan%'
+      THEN CASE WHEN p.remote_policy = 'onsite' THEN 0 WHEN p.remote_policy = 'hybrid' THEN 1 ELSE 2 END
+    WHEN p.remote_policy = 'remote' THEN 3
+    ELSE 4
+  END
+`
+
 const REVIEW_ORDER = `
   CASE p.stage
     WHEN 'in_review' THEN 0
@@ -44,7 +59,7 @@ export function queueRows(stage?: Stage | 'active'): QueueRow[] {
 
   const postings = plainAll<Posting>(
     db
-      .prepare(`SELECT p.* FROM postings p WHERE p.closed_at IS NULL AND ${where} ORDER BY ${REVIEW_ORDER}, p.id DESC LIMIT 200`)
+      .prepare(`SELECT p.* FROM postings p WHERE p.closed_at IS NULL AND ${where} ORDER BY ${REVIEW_ORDER}, ${LOCATION_ORDER}, p.id DESC LIMIT 200`)
       .all(...params),
   )
 

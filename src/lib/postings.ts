@@ -127,7 +127,15 @@ export function getPosting(db: Db, id: number): Posting | undefined {
 }
 
 export function postingsByStage(db: Db, stage: Stage, limit?: number): Posting[] {
-  const sql = `SELECT * FROM postings WHERE stage = ? AND closed_at IS NULL ORDER BY id${limit ? ' LIMIT ?' : ''}`
+  // NYC and onsite first: scoring effort goes to the roles he most wants.
+  const order = `
+    CASE
+      WHEN location LIKE '%New York%' OR location LIKE '%NYC%' OR location LIKE '%Brooklyn%' OR location LIKE '%Manhattan%'
+        THEN CASE WHEN remote_policy = 'onsite' THEN 0 WHEN remote_policy = 'hybrid' THEN 1 ELSE 2 END
+      WHEN remote_policy = 'remote' THEN 3
+      ELSE 4
+    END, id`
+  const sql = `SELECT * FROM postings WHERE stage = ? AND closed_at IS NULL ORDER BY ${order}${limit ? ' LIMIT ?' : ''}`
   const rows = limit ? db.prepare(sql).all(stage, limit) : db.prepare(sql).all(stage)
   return plainAll<Posting>(rows)
 }

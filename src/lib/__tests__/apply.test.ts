@@ -10,6 +10,7 @@ const PROFILE: Profile = {
   portfolio: 'https://akabuild.dev', website: 'https://akaoss.dev',
   work_authorized: true, requires_sponsorship: false, work_authorization_note: 'U.S. citizen.',
   over_18: true, willing_onsite: true,
+  citizenships: ['United States', 'United Kingdom'], willing_to_relocate: true,
   demographics: {
     pronouns: 'he/him/his', gender: 'Male', race: 'White', hispanic_latino: false,
     veteran_status: 'I am not a protected veteran', disability_status: 'No, I do not have a disability',
@@ -110,6 +111,21 @@ await describe('apply: option-constrained fields', () => {
   const mismatch = r(f('Country', 'multi_value_single_select', { options: ['Canada', 'Mexico'] }))
   eq('a value outside the options is unresolved', mismatch.action, 'unresolved')
   check('and names the options', (mismatch as { reason: string }).reason.includes('Canada'))
+})
+
+await describe('apply: relocation and work authorisation', () => {
+  const yesNo = (label: string) => f(label, 'multi_value_single_select', { options: ['Yes', 'No'] })
+
+  // Mutiny's actual question, which no rule matched before.
+  eq(
+    'relocation question',
+    (r(yesNo('Are you currently based in the New York City area, or are you willing to relocate here prior to starting this role?')) as { value: string }).value,
+    'Yes',
+  )
+  // Dual citizenship: authorised in both, sponsorship needed in neither.
+  eq('authorised in the US', (r(yesNo('Are you legally authorized to work in the United States?')) as { value: string }).value, 'Yes')
+  eq('authorised in the UK', (r(yesNo('Do you have the right to work in the United Kingdom?')) as { value: string }).value, 'Yes')
+  eq('no sponsorship needed', (r(yesNo('Will you require visa sponsorship?')) as { value: string }).value, 'No')
 })
 
 await describe('apply: files', () => {

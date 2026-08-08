@@ -175,24 +175,26 @@ await describe('filter: location', () => {
   // A multi-city req lists every office, so one NYC mention is enough.
   check('multi-city with NYC passes', at('San Francisco, CA | New York City, NY').decision === 'pass')
 
-  check('San Francisco rejects', at('San Francisco').decision === 'reject')
+  // He holds US and UK citizenship and will relocate for the right role, so
+  // these are real options rather than rejects, flagged for what they involve.
+  check('San Francisco passes', at('San Francisco').decision === 'pass')
+  eq('flagged as a US move', at('San Francisco').relocation, 'relocate_us')
+  check('London passes', at('London, United Kingdom').decision === 'pass')
+  eq('flagged as a UK move', at('London, United Kingdom').relocation, 'relocate_uk')
+  eq('New York needs no move', at('New York, NY').relocation, null)
+
+  // Somewhere he would need a visa is still out.
   check('Seoul rejects', at('Seoul, Korea').decision === 'reject')
   check('Malaysia rejects', at('Malaysia').decision === 'reject')
-  eq('and says why', at('Seoul, Korea').reason, 'outside the NYC metro')
+  check('Tokyo rejects', at('Tokyo, Japan').decision === 'reject')
+  eq('and says why', at('Seoul, Korea').reason, 'somewhere he would need a visa')
 
-  // Remote rescues a role only when it is anchored in the US.
   check('US remote passes', at('United States', 'remote').decision === 'pass')
   check('remote with no location passes', at(null, 'remote').decision === 'pass')
-  check('remote in Portugal rejects', at('Portugal', 'remote').decision === 'reject')
-  check('remote in Indonesia rejects', at('Indonesia', 'remote').decision === 'reject')
-  check('remote in Canada rejects', at('Toronto, Canada', 'remote').decision === 'reject')
+  check('remote in Indonesia still rejects', at('Indonesia', 'remote').decision === 'reject')
   // Absence of a location is not evidence of a bad one.
   check('unstated location passes', at(null).decision === 'pass')
   check('empty location passes', at('  ').decision === 'pass')
-
-  // Location outranks the allowlist: a great title in the wrong city is still
-  // in the wrong city.
-  check('allowlisted title in Tokyo rejects', at('Tokyo, Japan').decision === 'reject')
 })
 
 await describe('filter: keyword hits', () => {
