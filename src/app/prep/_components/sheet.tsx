@@ -153,7 +153,7 @@ export function Sheet({ sheet }: { sheet: PrepView }) {
         )}
       </header>
 
-      <div className="lg:grid lg:grid-cols-[184px_minmax(0,1fr)] lg:gap-12">
+      <div className="mt-7 lg:grid lg:grid-cols-[184px_minmax(0,1fr)] lg:gap-12">
         <Rail items={railItems} active={active} onJump={jump} expanded={expanded} onToggleAll={toggleAll} />
 
         <div ref={bodyRef} className="min-w-0">

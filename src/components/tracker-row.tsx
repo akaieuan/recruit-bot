@@ -1,14 +1,18 @@
 'use client'
 
 import { useActionState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { markFollowedUp, setApplicationStatus, type ActionState } from '@/app/actions'
+import { Badge } from '@/components/ui/badge'
+import { TD, TR } from '@/components/ui/table'
 import { APP_STATUS_STYLE, cn, formatDate, relativeDays } from '@/lib/ui'
 import { APPLICATION_STATUSES, type Application } from '@/lib/types'
 
 /** The one thing in the notes worth its own column. */
 function signal(notes: string | null): { text: string; tone: string } | null {
   const n = notes ?? ''
-  if (/resume downloaded/i.test(n)) return { text: 'Resume downloaded', tone: 'text-interview border-interview/35 bg-interview/10' }
+  if (/resume downloaded/i.test(n))
+    return { text: 'Resume downloaded', tone: 'text-interview border-interview/35 bg-interview/10' }
   if (/application viewed/i.test(n)) return { text: 'Viewed', tone: 'text-viewed border-viewed/35 bg-viewed/10' }
   if (/posting closed/i.test(n)) return { text: 'Posting closed', tone: 'text-dim2 border-line bg-panel2' }
   if (/submitted/i.test(n)) return { text: 'Submitted', tone: 'text-applied border-applied/35 bg-applied/10' }
@@ -24,61 +28,87 @@ export function TrackerRow({ app }: { app: Application }) {
   const sig = signal(app.notes)
 
   return (
-    <tr className="border-b border-line last:border-0 transition-colors hover:bg-panel">
-      <td className="px-3 py-2 align-top">
+    <TR interactive>
+      <TD pinned>
         {app.url ? (
-          <a href={app.url} target="_blank" rel="noreferrer" className="text-fg hover:underline">
+          <a
+            href={app.url}
+            target="_blank"
+            rel="noreferrer"
+            title={app.company}
+            className="block truncate font-medium text-fg underline-offset-2 hover:underline"
+          >
             {app.company}
           </a>
         ) : (
-          <span className="text-fg">{app.company}</span>
-        )}
-      </td>
-
-      <td className="max-w-[300px] px-3 py-2 align-top text-[12px] text-dim">
-        <span className={cn(app.role.startsWith('(') && 'text-dim2 italic')}>{app.role}</span>
-        {app.status_ambiguous ? (
-          <span className="ml-2 text-[11px] text-viewed" title={`Imported as "${app.status_raw}"`}>
-            confirm
+          <span className="block truncate font-medium text-fg" title={app.company}>
+            {app.company}
           </span>
-        ) : null}
-      </td>
+        )}
+      </TD>
 
-      <td className="px-3 py-2 align-top">
+      <TD className="text-[12.5px] text-dim">
+        <div className="flex items-center gap-2">
+          <span className={cn('truncate', app.role.startsWith('(') && 'text-dim2 italic')} title={app.role}>
+            {app.role}
+          </span>
+          {app.status_ambiguous ? (
+            <Badge
+              className="border-viewed/35 bg-viewed/10 text-viewed"
+              title={`Imported as "${app.status_raw}"`}
+            >
+              confirm
+            </Badge>
+          ) : null}
+        </div>
+      </TD>
+
+      <TD>
         <form action={setStatus}>
           <input type="hidden" name="applicationId" value={app.id} />
-          <select
-            name="status"
-            defaultValue={app.status}
-            onChange={(e) => e.currentTarget.form?.requestSubmit()}
-            className={cn(
-              'cursor-pointer rounded-[6px] border border-line bg-panel2 px-1.5 py-0.5 text-[11.5px] transition-colors hover:border-line2 focus:border-line2 focus:outline-none',
-              APP_STATUS_STYLE[app.status],
-            )}
-          >
-            {APPLICATION_STATUSES.map((s) => (
-              <option key={s} value={s} className="bg-panel2 text-fg">
-                {s.replace(/_/g, ' ')}
-              </option>
-            ))}
-          </select>
+          {/* The native chevron sits at a different inset in every engine and
+              cannot be coloured, so the control draws its own. */}
+          <div className="relative">
+            <select
+              name="status"
+              defaultValue={app.status}
+              aria-label={`Status for ${app.company}`}
+              onChange={(e) => e.currentTarget.form?.requestSubmit()}
+              className={cn(
+                'w-full cursor-pointer appearance-none rounded-[6px] border border-line bg-panel2 py-1 pl-2 pr-6 text-[11.5px] transition-colors hover:border-line2 focus:border-line2 focus:outline-none',
+                APP_STATUS_STYLE[app.status],
+              )}
+            >
+              {APPLICATION_STATUSES.map((s) => (
+                <option key={s} value={s} className="bg-panel2 text-fg">
+                  {s.replace(/_/g, ' ')}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 size-3 -translate-y-1/2 text-dim2" />
+          </div>
         </form>
-      </td>
+      </TD>
 
-      <td className="tabular whitespace-nowrap px-3 py-2 align-top text-[12px] text-dim">
+      <TD className="tabular whitespace-nowrap font-mono text-[11.5px] text-dim">
         {formatDate(app.applied_at, app.applied_at_precision)}
         {app.applied_at && app.applied_at_precision === 'day' && (
           <span className="ml-1.5 text-dim2">{relativeDays(app.applied_at)}</span>
         )}
-      </td>
+      </TD>
 
-      <td className="whitespace-nowrap px-3 py-2 align-top text-[12px]">
+      <TD className="whitespace-nowrap text-[12px]">
         {app.follow_up_at && !app.followed_up_at ? (
           <form action={followUp} className="flex items-center gap-2">
             <input type="hidden" name="applicationId" value={app.id} />
-            <span className={cn('tabular', overdue ? 'text-viewed' : 'text-dim2')}>{app.follow_up_at}</span>
+            <span className={cn('tabular font-mono text-[11.5px]', overdue ? 'text-viewed' : 'text-dim2')}>
+              {app.follow_up_at}
+            </span>
             {overdue && (
-              <button type="submit" className="text-[11px] text-dim underline-offset-2 hover:text-fg hover:underline">
+              <button
+                type="submit"
+                className="cursor-pointer text-[11px] text-dim underline-offset-2 hover:text-fg hover:underline"
+              >
                 done
               </button>
             )}
@@ -88,17 +118,17 @@ export function TrackerRow({ app }: { app: Application }) {
         ) : (
           <span className="text-dim2">—</span>
         )}
-      </td>
+      </TD>
 
-      <td className="px-3 py-2 align-top">
+      <TD>
         {sig ? (
-          <span className={cn('inline-block whitespace-nowrap rounded-[6px] border px-1.5 py-0.5 text-[11px]', sig.tone)}>
-            {sig.text}
-          </span>
+          <Badge className={cn('max-w-full', sig.tone)}>
+            <span className="truncate">{sig.text}</span>
+          </Badge>
         ) : (
           <span className="text-[11px] text-dim2">—</span>
         )}
-      </td>
-    </tr>
+      </TD>
+    </TR>
   )
 }

@@ -44,7 +44,7 @@ export function Block({ id, className, children }: { id: string; className?: str
     <section
       id={id}
       className={cn(
-        'mt-8 scroll-mt-[64px] border-t border-line pt-8 first:mt-6 first:border-0 first:pt-0 lg:scroll-mt-6',
+        'mt-8 scroll-mt-[64px] border-t border-line pt-8 first:mt-5 first:border-0 first:pt-0 lg:scroll-mt-6',
         className,
       )}
     >

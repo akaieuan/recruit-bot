@@ -26,6 +26,14 @@ export const TITLE_ALLOW: { name: string; re: RegExp }[] = [
   { name: 'creative technologist', re: /\bcreative\s+technologist\b/i },
   { name: 'design technologist', re: /\bdesign\s+technologist\b/i },
   { name: 'ui engineer (design-led)', re: /\b(ux|ui)\s+engineer\b/i },
+  // He is a strong FDE: client-facing, technical, and used to working a complex
+  // problem out in front of the customer. The original handoff rejected all of
+  // this, which threw away a category he is genuinely good at.
+  { name: 'forward deployed engineer', re: /\bforward[\s-]?deployed\b|\bfde\b/i },
+  { name: 'solutions engineer', re: /\bsolutions?\s+(engineer|architect)\b/i },
+  { name: 'applied ai', re: /\bapplied\s+ai\b/i },
+  { name: 'ai strategist', re: /\bai\s+strateg(ist|y)\b/i },
+  { name: 'ai engineer', re: /\bai\s+engineer\b/i },
 ]
 
 /**
@@ -81,14 +89,17 @@ export const TITLE_REJECT: { reason: string; re: RegExp }[] = [
     re: /\b(front[\s-]?end|frontend|backend|back[\s-]?end|full[\s-]?stack|software|platform|infrastructure|systems|security|mobile|ios|android|web|data|devops|cloud|network|qa|test|performance|silicon|hardware|quantitative|firmware)\s+(engineer|developer|architect)\b|\bsoftware\s+development\s+engineer\b|\bsre\b/i,
   },
   {
-    // Customer-facing engineering: deployment and implementation work, not
-    // product design.
-    reason: 'forward deployed or customer engineering',
-    re: /\bforward[\s-]?deployed\b|\bfde\b|\b(customer|client|solutions?|deployment|field|sales|partner|integration|implementation|support|content|gtm|go[\s-]?to[\s-]?market|growth)\s+(engineer|architect|consultant|strateg)/i,
+    // Only the commercial end of customer-facing work. Forward deployed and
+    // solutions roles are on the allowlist above: those are technical and he
+    // is good at them.
+    reason: 'sales or account-side customer work',
+    re: /\b(sales|gtm|go[\s-]?to[\s-]?market|growth|revenue|partner)\s+(engineer|architect|consultant|strateg)/i,
   },
   {
-    reason: 'applied AI or ML engineering',
-    re: /\b(machine\s+learning|ml|ai|applied\s+ai|deep\s+learning|research|prompt)\s+(engineer|scientist|architect)\b|\bresearch\s+scientist\b|\bapplied\s+ai\b/i,
+    // He has no ML research background and will not claim one. Applied AI and
+    // AI engineering are on the allowlist; this is the science end.
+    reason: 'ML research or model training',
+    re: /\b(machine\s+learning|ml|deep\s+learning)\s+(engineer|scientist|architect)\b|\bresearch\s+scientist\b|\b(model|training|inference|pretraining)\s+(engineer|scientist)\b/i,
   },
   {
     // An engineering req wearing a domain: "Staff Engineer, Security" and
@@ -127,9 +138,9 @@ export const TITLE_REJECT: { reason: string; re: RegExp }[] = [
     re: /\bresearch(er)?\b|\bscientist\b|\banalyst\b|\banalytics\b/i,
   },
   {
-    // Advisory and strategy work, not building. Tenex posts ten of these.
-    reason: 'strategy, consulting or operations',
-    re: /\bstrateg(ist|y)\b|\bconsultant\b|\bops\b|\boperations\b|\badvisor\b|\bprogram\b|\bproject\b|\btpm\b|\bchief\s+of\s+staff\b|\bcreator\b|\bproducer\b/i,
+    // AI strategy is on the allowlist. This is the management-consulting end.
+    reason: 'operations, program or project management',
+    re: /\bops\b|\boperations\b|\badvisor\b|\bprogram\s+manager\b|\bproject\s+manager\b|\btpm\b|\bchief\s+of\s+staff\b|\bproducer\b|\bmanagement\s+consultant\b/i,
   },
   {
     // Discipline leads are people roles even when the title says IC. The

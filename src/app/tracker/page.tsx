@@ -1,8 +1,7 @@
-import Link from 'next/link'
 import { pipelineSummary, trackerRows } from '@/lib/views'
 import { TrackerTable } from '@/components/tracker-table'
 import { Stat, StatRow } from '@/components/ui/stat'
-import { cn } from '@/lib/ui'
+import { Chip, ChipRow } from '@/components/ui/chip'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,26 +34,34 @@ export default async function TrackerPage({ searchParams }: { searchParams: Prom
           accent="bg-viewed"
           emphasis
         />
-        <Stat label="Interviewing" value={s.interviewing} hint="live conversations" href="/tracker?filter=interviewing" accent="bg-interview" />
-        <Stat label="Follow-ups due" value={s.followUps} hint="seven days and no reply" href="/tracker?filter=followups" accent="bg-closed" />
+        <Stat
+          label="Interviewing"
+          value={s.interviewing}
+          hint="live conversations"
+          href="/tracker?filter=interviewing"
+          accent="bg-interview"
+        />
+        <Stat
+          label="Follow-ups due"
+          value={s.followUps}
+          hint="seven days and no reply"
+          href="/tracker?filter=followups"
+          accent="bg-closed"
+          emphasis
+        />
       </StatRow>
 
-      <div className="mt-5 flex flex-wrap gap-1.5">
+      <ChipRow className="mt-5">
         {FILTERS.map((f) => (
-          <Link
+          <Chip
             key={f.key}
             href={f.key === 'all' ? '/tracker' : `/tracker?filter=${f.key}`}
-            className={cn(
-              'rounded-[7px] border px-2.5 py-1 text-[11.5px] transition-colors',
-              current === f.key
-                ? 'border-line2 bg-panel2 text-fg'
-                : 'border-line bg-panel text-dim hover:border-line2 hover:text-fg',
-            )}
+            selected={current === f.key}
           >
             {f.label}
-          </Link>
+          </Chip>
         ))}
-      </div>
+      </ChipRow>
 
       <TrackerTable rows={rows} />
     </main>

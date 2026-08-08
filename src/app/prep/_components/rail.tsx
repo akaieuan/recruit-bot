@@ -28,7 +28,7 @@ export function Rail({
 }) {
   return (
     <>
-      <div className="sticky top-0 z-20 -mx-5 mt-4 border-y border-line bg-bg/85 px-5 py-1.5 backdrop-blur lg:hidden">
+      <div className="sticky top-0 z-20 -mx-5 border-y border-line bg-bg/85 px-5 py-1.5 backdrop-blur lg:hidden">
         <nav
           aria-label="Sheet sections"
           className="flex gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

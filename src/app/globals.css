@@ -96,9 +96,10 @@
     overflow-x: auto;
     overscroll-behavior-x: contain;
     background:
-      linear-gradient(to left, var(--color-panel) 42%, transparent) right center / 48px 100% no-repeat
+      linear-gradient(to left, var(--color-panel) 45%, transparent) right center / 56px 100% no-repeat
         local,
-      linear-gradient(to left, rgb(0 0 0 / 0.55), transparent) right center / 26px 100% no-repeat scroll,
+      linear-gradient(to left, rgb(0 0 0 / 0.75), rgb(0 0 0 / 0)) right center / 36px 100% no-repeat
+        scroll,
       var(--color-panel);
   }
 

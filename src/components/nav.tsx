@@ -42,6 +42,9 @@ const VIEWS = [
 export function Nav() {
   const pathname = usePathname()
   const active = VIEWS.find((v) => (v.href === '/' ? pathname === '/' : pathname.startsWith(v.href))) ?? VIEWS[0]!
+  // A detail page brings its own title. Two large headings stacked is the
+  // reader deciding which one the page is about, which is not their job.
+  const isIndex = VIEWS.some((v) => v.href === pathname)
 
   return (
     <header>
@@ -75,13 +78,17 @@ export function Nav() {
         </nav>
       </div>
 
-      <div className="mt-8 border-b border-line pb-6">
-        <p className="eyebrow text-dim2">{active.kicker}</p>
-        <h1 className="mt-2.5 text-[26px] font-light leading-none tracking-[-0.03em] text-fg">
-          {active.label}
-        </h1>
-        <p className="mt-2.5 max-w-[64ch] text-[13px] text-dim">{active.blurb}</p>
-      </div>
+      {isIndex ? (
+        <div className="mt-8 border-b border-line pb-6">
+          <p className="eyebrow text-dim2">{active.kicker}</p>
+          <h1 className="mt-2.5 text-[26px] font-light leading-none tracking-[-0.03em] text-fg">
+            {active.label}
+          </h1>
+          <p className="mt-2.5 max-w-[64ch] text-[13px] text-dim">{active.blurb}</p>
+        </div>
+      ) : (
+        <div className="mt-4 border-b border-line" />
+      )}
     </header>
   )
 }

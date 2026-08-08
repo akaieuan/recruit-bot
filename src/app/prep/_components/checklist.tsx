@@ -58,14 +58,16 @@ export function Checklist({
 
       {hint && <p className="mt-1 max-w-[76ch] text-[12px] text-dim2">{hint}</p>}
 
-      <ul className={cn('mt-3 grid gap-1.5', twoUp && 'md:grid-cols-2 md:gap-x-3')}>
+      {/* Columns rather than a grid: a row of equal-height cells pads the short
+          questions out to the length of the longest one in the row. */}
+      <ul className={cn('mt-3', twoUp && 'md:columns-2 md:gap-x-3')}>
         {items.map((item) => {
           const on = checked.includes(item)
           return (
-            <li key={item}>
+            <li key={item} className="mb-1.5 break-inside-avoid">
               <label
                 className={cn(
-                  'flex h-full cursor-pointer items-start gap-2.5 rounded-[7px] border bg-panel px-3 py-2.5 transition-colors',
+                  'flex cursor-pointer items-start gap-2.5 rounded-[7px] border bg-panel px-3 py-2.5 transition-colors',
                   on ? 'border-line bg-panel/40' : 'border-line hover:border-line2 hover:bg-panel2/60',
                 )}
               >

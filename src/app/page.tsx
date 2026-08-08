@@ -111,7 +111,10 @@ export default async function PipelinePage({
                   const style = STAGE_STYLE[posting.stage]
                   const href = `/posting/${posting.id}`
                   return (
-                    <TR key={posting.id} interactive>
+                    // A fixed height so the rows carrying a second line (a remote
+                    // policy, a years flag) do not make the column of rows around
+                    // them jump. Scanning a ragged column is slower.
+                    <TR key={posting.id} interactive className="h-[54px]">
                       <TD pinned>
                         <Link
                           href={href}
@@ -139,10 +142,14 @@ export default async function PipelinePage({
                             {posting.role_title}
                           </Link>
                           {draftCount > 0 && (
-                            <Badge title={`${draftCount} draft${draftCount === 1 ? '' : 's'}`}>{draftCount}d</Badge>
+                            <Badge>
+                              {draftCount} draft{draftCount === 1 ? '' : 's'}
+                            </Badge>
                           )}
                           {critiqueVerdict === 'revise' && (
-                            <Badge className="border-viewed/35 bg-viewed/10 text-viewed">revise</Badge>
+                            <Badge className="border-viewed/35 bg-viewed/10 text-viewed" title="critique: revise">
+                              revise
+                            </Badge>
                           )}
                         </div>
                       </TD>
