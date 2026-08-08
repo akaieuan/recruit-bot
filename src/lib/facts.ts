@@ -22,6 +22,21 @@ export interface Config {
   email: string
   links: Record<string, string[]> & { design: string[] }
   confirm?: string[]
+  /**
+   * Where files that get uploaded to application forms live. Outside the repo
+   * on purpose: the browser can only upload from folders shared with the
+   * session, and the session's own sandbox paths never survive the trip.
+   */
+  uploads?: {
+    resume?: string
+    covers_dir?: string
+    /**
+     * HTTP URL the application page can fetch the resume from. A file input
+     * only takes bytes the page itself can read, so a path on disk is no use
+     * to the payload.
+     */
+    resume_url?: string
+  }
 }
 
 let factsCache: FactLibrary | undefined

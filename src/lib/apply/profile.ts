@@ -115,7 +115,8 @@ export function profileGaps(p: Profile, askedFor?: Set<string>): string[] {
   const asked = (key: string) => !askedFor || askedFor.has(key)
 
   if (!p.phone && asked('phone')) gaps.push('phone is not set in data/profile.json, and this form asks for one')
-  if (!existsSync(join(PATHS.repoRoot, p.resume_path))) gaps.push(`resume not found at ${p.resume_path}`)
+  const resume = p.resume_path.startsWith('/') ? p.resume_path : join(PATHS.repoRoot, p.resume_path)
+  if (!existsSync(resume)) gaps.push(`resume not found at ${p.resume_path}`)
 
   for (const field of p.confirm ?? []) {
     if (asked(field)) gaps.push(`"${field}" is marked for confirmation in data/profile.json`)

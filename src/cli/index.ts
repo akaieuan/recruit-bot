@@ -43,9 +43,17 @@ const COMMANDS: Record<string, { summary: string; run: Handler }> = {
     summary: '<file.json>                          bring in postings found outside a polled board',
     run: async (a) => (await import('./commands/ingest.ts')).run(a),
   },
+  batch: {
+    summary: '[--limit 10]                        the run sheet for a session spent applying',
+    run: async (a) => (await import('./commands/batch.ts')).run(a),
+  },
   apply: {
-    summary: '<postingId>                         prepare an application: files, answers, field plan',
+    summary: '<postingId> [--payload]             prepare an application: files, answers, field plan',
     run: async (a) => (await import('./commands/apply.ts')).run(a),
+  },
+  record: {
+    summary: '<postingId> [--status] [--note]     log an application he has sent',
+    run: async (a) => (await import('./commands/record.ts')).run(a),
   },
   tracker: {
     summary: 'list | followups | set              the application tracker',

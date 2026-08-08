@@ -1,6 +1,10 @@
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { basename, dirname, join } from 'node:path'
 import { openDb } from '../../lib/db.ts'
-import { buildPlan, formatPlan } from '../../lib/apply/plan.ts'
-import { args, fail } from '../util.ts'
+import { buildPlan, formatPlan, type ApplicationPlan } from '../../lib/apply/plan.ts'
+import { readConfig } from '../../lib/facts.ts'
+import { PATHS } from '../../lib/paths.ts'
+import { args, fail, plural } from '../util.ts'
 
 /**
  * Prepares an application: renders the approved cover letter, gathers the
@@ -13,12 +17,20 @@ export async function run(argv: string[]): Promise<void> {
   const { values, positionals } = args(argv, {
     posting: { type: 'string' },
     json: { type: 'boolean' },
+    payload: { type: 'boolean' },
+    out: { type: 'string' },
+    force: { type: 'boolean' },
   })
 
   const id = Number(values.posting ?? positionals[0])
-  if (!Number.isFinite(id)) fail('usage: pnpm cli apply <postingId>')
+  if (!Number.isFinite(id)) fail('usage: pnpm cli apply <postingId> [--payload [--out <path>]]')
 
   const plan = await buildPlan(id, { db: openDb() })
+
+  if (values.payload) {
+    await writePayload(plan, values.out, values.force === true)
+    return
+  }
 
   if (values.json) {
     console.log(JSON.stringify(plan, null, 2))
@@ -33,4 +45,50 @@ export async function run(argv: string[]): Promise<void> {
     console.log(`  ${plan.applyUrl}`)
   }
   if (!plan.ready) process.exitCode = 1
+}
+
+/**
+ * Writes the script that fills the live form, for the session to run in the
+ * tab. Only a ready plan earns one: a payload built over a gap would put a
+ * blank or a guess into a real field. --force exists for a gap he has already
+ * seen and decided to fill by hand.
+ *
+ * The script fills and uploads. It never submits.
+ */
+async function writePayload(plan: ApplicationPlan, out: string | undefined, force: boolean): Promise<void> {
+  if (!plan.ready && !force) {
+    console.error('not ready to fill:')
+    for (const gap of plan.gaps) console.error(`  - ${gap}`)
+    if (!plan.gaps.length) console.error('  - a required form field has no resolved value')
+    console.error(`\nresolve those (pnpm cli apply ${plan.posting.id}), or pass --force to build it anyway.`)
+    process.exit(1)
+  }
+
+  const { buildAshbyPayload, buildGreenhousePayload } = await import('../../lib/apply/payload.ts')
+  const build =
+    plan.posting.ats === 'ashby' ? buildAshbyPayload : plan.posting.ats === 'greenhouse' ? buildGreenhousePayload : null
+  if (!build) fail(`no payload builder for ats "${plan.posting.ats}". Fill this one by hand.`)
+
+  // Uploads travel as URLs, not paths: the browser can only read files the
+  // session shares with it, and nothing inside this repo qualifies.
+  const resumeUrl = readConfig().uploads?.resume_url
+  if (!resumeUrl) {
+    fail('no uploads.resume_url in data/config.json, so the resume cannot be attached. Set it and run this again.')
+  }
+
+  const coverUrl = plan.files.cover
+    ? `http://localhost:3000/covers/${encodeURIComponent(basename(plan.files.cover))}`
+    : undefined
+  const built = build(plan, { resumeUrl, coverUrl })
+
+  const path = out ?? join(PATHS.work, 'apply', `${plan.posting.id}.js`)
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, built.js)
+
+  console.log(`${plan.posting.company} / ${plan.posting.role_title}`)
+  console.log(`${plural(built.fills, 'field')} to fill, ${plural(built.uploads, 'upload')}`)
+  for (const warning of built.warnings) console.log(`  warning: ${warning}`)
+  console.log(`\n${path}`)
+  console.log(plan.applyUrl)
+  console.log('\nrun it in the tab, then stop and show him what is in the form. He sends it.')
 }

@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import { PATHS } from '../paths.ts'
@@ -74,7 +74,11 @@ export async function renderCoverLetter(input: CoverLetterInput, outPath?: strin
     })
   }
 
-  const path = outPath ?? join(PATHS.outCovers, coverFileName(input.company, input.role, config.name))
+  // The shared cover folder is uploadable by the browser; data/out is not.
+  const outDir = config.uploads?.covers_dir && existsSync(config.uploads.covers_dir)
+    ? config.uploads.covers_dir
+    : PATHS.outCovers
+  const path = outPath ?? join(outDir, coverFileName(input.company, input.role, config.name))
   mkdirSync(dirname(path), { recursive: true })
   writeFileSync(path, await doc.save())
 

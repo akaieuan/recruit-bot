@@ -78,8 +78,6 @@ export async function buildPlan(
       files.cover = rendered.path
       if (rendered.overflow) gaps.push(`cover letter runs ${rendered.overflowBy.toFixed(1)}pt onto a second page`)
     }
-  } else {
-    gaps.push('no approved cover letter. Run /draft and approve it before applying.')
   }
 
   // Greenhouse publishes its form schema, so those fields are known up front.
@@ -96,6 +94,16 @@ export async function buildPlan(
     for (const q of draftableQuestions(questions)) {
       if (!answers[q.key]) gaps.push(`no approved answer for "${q.label.slice(0, 70)}"`)
     }
+  }
+
+  // A missing cover letter only blocks when this form is known to ask for
+  // one. Mutiny and Credal have no cover field at all, and blocking those on
+  // an unwritten letter would stall applications over a file with nowhere to
+  // go. Ashby publishes no schema, so an unseen cover field is handled at the
+  // form: the payload attaches a cover only when one exists.
+  const wantsCover = knownFields.some((f) => /cover/i.test(`${f.label} ${f.name}`))
+  if (wantsCover && !files.cover) {
+    gaps.push('this form asks for a cover letter and none is approved. Run /draft first.')
   }
 
   // Gaps are judged against what this form actually asks for. Ashby does not
