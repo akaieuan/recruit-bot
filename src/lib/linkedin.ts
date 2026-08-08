@@ -18,7 +18,11 @@ export interface LinkedinRow {
   company: string
   location: string
   applied_ago: string
-  signals: string[]
+  signals?: string[]
+  /** Archive only: LinkedIn showed "Not moving forward" on the card. */
+  rejected?: boolean
+  /** Archive only: the posting closed. Says nothing about his application. */
+  closed?: boolean
 }
 
 /** "4h ago" / "2w ago" / "3mo ago" to a date, plus how precise that is. */
@@ -50,6 +54,15 @@ export function resolveAppliedDate(
  * rejected, so it does not become a rejection. A viewed application or a
  * downloaded resume is real movement and is worth surfacing.
  */
+export function statusFromRow(row: LinkedinRow): { status: ApplicationStatus; note: string | null } {
+  // The archive is the only place an outcome is stated. "Not moving forward"
+  // is a rejection he never recorded anywhere else.
+  if (row.rejected) return { status: 'rejected', note: 'LinkedIn: not moving forward' }
+  const base = statusFromSignals(row.signals ?? [])
+  if (row.closed && !base.note) return { status: 'applied', note: 'Posting closed, no reply recorded' }
+  return base
+}
+
 export function statusFromSignals(signals: string[]): { status: ApplicationStatus; note: string | null } {
   const joined = signals.join(' ').toLowerCase()
   if (/not selected|no longer under consideration/.test(joined)) {
@@ -69,12 +82,13 @@ export interface LinkedinImportSummary {
   matched: number
   viewed: number
   closed: number
+  rejected: number
 }
 
 const normCompany = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/(inc|llc|corp|co|ltd)$/, '')
 
 export function importLinkedin(db: Db, rows: LinkedinRow[]): LinkedinImportSummary {
-  const summary: LinkedinImportSummary = { rows: rows.length, inserted: 0, matched: 0, viewed: 0, closed: 0 }
+  const summary: LinkedinImportSummary = { rows: rows.length, inserted: 0, matched: 0, viewed: 0, closed: 0, rejected: 0 }
   const now = nowIso()
 
   const findExact = db.prepare('SELECT id, status FROM applications WHERE lower(company) = lower(?) AND lower(role) = lower(?)')
@@ -100,9 +114,10 @@ export function importLinkedin(db: Db, rows: LinkedinRow[]): LinkedinImportSumma
       if (!row.company || !row.title) continue
 
       const { date, precision } = resolveAppliedDate(row.applied_ago)
-      const { status, note } = statusFromSignals(row.signals)
+      const { status, note } = statusFromRow(row)
       if (note === 'Application viewed' || note === 'Resume downloaded') summary.viewed++
-      if (row.signals.some((s) => /no longer accepting/i.test(s))) summary.closed++
+      if (row.closed || (row.signals ?? []).some((s) => /no longer accepting/i.test(s))) summary.closed++
+      if (status === 'rejected') summary.rejected++
 
       const url = `https://www.linkedin.com/jobs/view/${row.id}`
       // A follow-up only makes sense against a date precise enough to count from.
@@ -115,6 +130,10 @@ export function importLinkedin(db: Db, rows: LinkedinRow[]): LinkedinImportSumma
 
       if (existing) {
         update.run(row.location, url, date, precision, status, row.title, noteText, noteText, followUp, now, existing.id)
+        if (status === 'rejected') {
+          // A rejected application needs no follow-up chase.
+          db.prepare('UPDATE applications SET follow_up_at = NULL WHERE id = ?').run(existing.id)
+        }
         summary.matched++
       } else {
         insert.run(row.company, row.title, row.location, url, date, precision, status, noteText, followUp, now, now)

@@ -33,6 +33,7 @@ export async function run(argv: string[]): Promise<void> {
 
     console.log(`${s.rows} LinkedIn applications: ${s.inserted} new, ${s.matched} matched to existing rows`)
     console.log(`  ${s.viewed} viewed or resume downloaded, ${s.closed} against postings that have since closed`)
+    if (s.rejected) console.log(`  ${s.rejected} came back as not moving forward`)
 
     const orphans = unmatchedLocalRows(db, rows)
     if (orphans.length) {
