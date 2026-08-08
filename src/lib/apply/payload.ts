@@ -22,9 +22,19 @@ import type { Profile } from './profile.ts'
 
 export interface PayloadOptions {
   /** HTTP URL the page can fetch the resume from. Local paths do not work. */
-  resumeUrl: string
+  resumeUrl?: string
   coverUrl?: string
   portfolioUrl?: string
+  /**
+   * Attaching files is off unless asked for.
+   *
+   * Fetching a file into a form from script is the part that looks like
+   * automation to an ATS, and the account it would cost is his. The payload
+   * fills every text field and leaves the file inputs alone, so the uploads
+   * stay two clicks he makes himself with the files already sitting in the
+   * folder this tool writes them to.
+   */
+  attachFiles?: boolean
 }
 
 export interface BuiltPayload {
@@ -114,6 +124,10 @@ function build(plan: ApplicationPlan, opts: PayloadOptions, ats: Ats): BuiltPayl
 
     if (r.action === 'upload') {
       const slot = slotFor(`${label} ${r.field.name}`)
+      if (!opts.attachFiles) {
+        spec.skipped.push({ label, reason: 'upload left for him' })
+        continue
+      }
       const url = urlFor(slot, opts)
       if (!url) {
         spec.unresolved.push({ label, reason: `no URL for the ${slot} file` })
@@ -146,12 +160,11 @@ function build(plan: ApplicationPlan, opts: PayloadOptions, ats: Ats): BuiltPayl
       spec.fills.push({ label: field.label, value, optional: true })
     }
 
-    // Ashby's Resume field never arrives as a known field, and it is the one
-    // upload that has to happen for the form to be worth filling.
-    if (!spec.uploads.some((u) => u.slot === 'resume')) {
+    // Ashby's Resume field never arrives as a known field.
+    if (opts.attachFiles && opts.resumeUrl && !spec.uploads.some((u) => u.slot === 'resume')) {
       spec.uploads.push({ label: 'Resume', slot: 'resume', url: opts.resumeUrl, filename: RESUME_FILENAME })
     }
-    if (opts.coverUrl && !spec.uploads.some((u) => u.slot === 'cover')) {
+    if (opts.attachFiles && opts.coverUrl && !spec.uploads.some((u) => u.slot === 'cover')) {
       spec.uploads.push({
         label: 'Cover letter',
         slot: 'cover',
@@ -165,6 +178,9 @@ function build(plan: ApplicationPlan, opts: PayloadOptions, ats: Ats): BuiltPayl
 
   if (!spec.fills.length && !spec.uploads.length) {
     warnings.push('nothing on this plan can be filled from the page. Fill it by hand.')
+  }
+  if (!opts.attachFiles) {
+    warnings.push('files are not attached: upload the resume (and the cover letter when there is one) yourself')
   }
 
   return { js: runtime(embed(spec), embed(ats)), fills: spec.fills.length, uploads: spec.uploads.length, warnings }

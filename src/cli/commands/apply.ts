@@ -1,8 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { basename, dirname, join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { openDb } from '../../lib/db.ts'
 import { buildPlan, formatPlan, type ApplicationPlan } from '../../lib/apply/plan.ts'
-import { readConfig } from '../../lib/facts.ts'
 import { PATHS } from '../../lib/paths.ts'
 import { args, fail, plural } from '../util.ts'
 
@@ -69,26 +68,19 @@ async function writePayload(plan: ApplicationPlan, out: string | undefined, forc
     plan.posting.ats === 'ashby' ? buildAshbyPayload : plan.posting.ats === 'greenhouse' ? buildGreenhousePayload : null
   if (!build) fail(`no payload builder for ats "${plan.posting.ats}". Fill this one by hand.`)
 
-  // Uploads travel as URLs, not paths: the browser can only read files the
-  // session shares with it, and nothing inside this repo qualifies.
-  const resumeUrl = readConfig().uploads?.resume_url
-  if (!resumeUrl) {
-    fail('no uploads.resume_url in data/config.json, so the resume cannot be attached. Set it and run this again.')
-  }
-
-  const coverUrl = plan.files.cover
-    ? `http://localhost:3000/covers/${encodeURIComponent(basename(plan.files.cover))}`
-    : undefined
-  const built = build(plan, { resumeUrl, coverUrl })
+  // Files are never attached by script. Fetching one into a form is the part
+  // that reads as automation to an ATS, and the account it would cost is his.
+  const built = build(plan, {})
 
   const path = out ?? join(PATHS.work, 'apply', `${plan.posting.id}.js`)
   mkdirSync(dirname(path), { recursive: true })
   writeFileSync(path, built.js)
 
   console.log(`${plan.posting.company} / ${plan.posting.role_title}`)
-  console.log(`${plural(built.fills, 'field')} to fill, ${plural(built.uploads, 'upload')}`)
-  for (const warning of built.warnings) console.log(`  warning: ${warning}`)
+  console.log(`${plural(built.fills, 'field')} to fill`)
+  for (const warning of built.warnings) console.log(`  ${warning}`)
+  if (plan.files.cover) console.log(`\ncover letter ready to upload: ${plan.files.cover}`)
+  console.log(`resume ready to upload: ${plan.profile.resume_path}`)
   console.log(`\n${path}`)
   console.log(plan.applyUrl)
-  console.log('\nrun it in the tab, then stop and show him what is in the form. He sends it.')
 }

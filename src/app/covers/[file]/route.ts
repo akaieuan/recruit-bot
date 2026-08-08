@@ -16,7 +16,13 @@ import { PATHS } from '@/lib/paths'
 
 export const dynamic = 'force-dynamic'
 
-const CORS = { 'Access-Control-Allow-Origin': '*' } as const
+// Allow-Private-Network answers Chrome's Private Network Access preflight:
+// a public https page (the ATS form) fetching into localhost is blocked
+// without it, and the payload's resume fetch dies as "Failed to fetch".
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Private-Network': 'true',
+} as const
 
 function coversDir(): string {
   const configured = readConfig().uploads?.covers_dir

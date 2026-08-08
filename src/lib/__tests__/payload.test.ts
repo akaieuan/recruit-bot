@@ -44,7 +44,12 @@ function plan(resolutions: Resolution[], over: Partial<ApplicationPlan> = {}): A
   }
 }
 
-const OPTS = { resumeUrl: 'http://localhost:3000/covers/resume.pdf', coverUrl: 'http://localhost:3000/covers/Ieuan%20King%20-%20Acme.pdf' }
+const OPTS = {
+  resumeUrl: 'http://localhost:3000/covers/resume.pdf',
+  coverUrl: 'http://localhost:3000/covers/Ieuan%20King%20-%20Acme.pdf',
+  // Attaching is opt-in. These tests cover the path that asks for it.
+  attachFiles: true,
+}
 
 /** The embedded data, read back out of the generated script. */
 function spec(js: string) {
@@ -139,7 +144,7 @@ await describe('payload: attaches the files it was given a URL for', () => {
 await describe('payload: a missing cover URL is reported, not improvised', () => {
   const built = buildGreenhousePayload(
     plan([{ action: 'upload', paths: ['/outside/cover.pdf'], source: 'generated cover letter', field: field('Cover Letter', 'file') }]),
-    { resumeUrl: OPTS.resumeUrl },
+    { resumeUrl: OPTS.resumeUrl, attachFiles: true },
   )
 
   eq('nothing is uploaded', built.uploads, 0)
@@ -196,4 +201,18 @@ await describe('payload: reports asynchronously', () => {
   check('stashes the report', built.js.includes('window.__recruitbot = report'))
   check('clears a stale one first', built.js.includes('window.__recruitbot = null'))
   check('and truncates what it reports', built.js.includes('s.slice(0, 80)'))
+})
+
+await describe('payload: files are left alone by default', () => {
+  // The default has to be the safe one. Fetching a file into a form from
+  // script is what reads as automation to an ATS, and the account it would
+  // cost is his, so a caller that forgets the flag attaches nothing.
+  const built = buildAshbyPayload(plan([]), { resumeUrl: OPTS.resumeUrl, coverUrl: OPTS.coverUrl })
+  eq('no uploads are encoded', built.uploads, 0)
+  check('and the script carries no fetch of the resume', !built.js.includes('covers/resume.pdf'))
+  check('the fields are still filled', built.fills > 0)
+  check(
+    'and it says the uploads are his',
+    built.warnings.some((w) => w.includes('upload the resume')),
+  )
 })
