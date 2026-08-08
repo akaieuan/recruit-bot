@@ -114,7 +114,7 @@ export default async function PipelinePage({
                     // A fixed height so the rows carrying a second line (a remote
                     // policy, a years flag) do not make the column of rows around
                     // them jump. Scanning a ragged column is slower.
-                    <TR key={posting.id} interactive className="h-[54px]">
+                    <TR key={posting.id} interactive className="h-[56px]">
                       <TD pinned>
                         <Link
                           href={href}
@@ -174,8 +174,10 @@ export default async function PipelinePage({
                             {keywordHits.length} kw
                           </span>
                         )}
+                        {/* Same metrics as the location's second line, so a row
+                            with one is exactly as tall as a row with the other. */}
                         {posting.years_flag && (
-                          <span className="mt-0.5 block truncate text-[11px] text-viewed">
+                          <span className="eyebrow mt-0.5 block truncate text-viewed">
                             {posting.years_flag.replace(/_/g, ' ')}
                           </span>
                         )}

@@ -178,11 +178,10 @@ export function Sheet({ sheet }: { sheet: PrepView }) {
           )}
 
           {sheet.fit.length + sheet.lack.length > 0 && (
+            // No section heading: the two panels label themselves, and a third
+            // word for the same thing is noise at the top of the comparison.
             <Block id="fit-gaps">
-              <SectionTitle>Fit and gaps</SectionTitle>
-              <div className="mt-3">
-                <FitGaps fit={sheet.fit} lack={sheet.lack} />
-              </div>
+              <FitGaps fit={sheet.fit} lack={sheet.lack} />
             </Block>
           )}
 

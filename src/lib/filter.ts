@@ -18,6 +18,29 @@ import type { NormalizedPosting, Posting } from './types.ts'
 export const COMP_FLOOR = 140_000
 export const TARGET_BAND = { min: 150_000, max: 250_000 } as const
 
+/**
+ * Rejects that outrank the allowlist.
+ *
+ * "Head of Applied AI Architecture" matches the applied-ai allow rule, and
+ * without this it would sail past the people-management reject. He has never
+ * managed a design team and will not claim to, so a management req is out
+ * whatever else the title says.
+ */
+export const OVERRIDE_REJECT: { reason: string; re: RegExp }[] = [
+  {
+    reason: 'people management or executive',
+    re: /\bhead\s+of\b|\bdirector\b|\bvp\b|\bvice\s+president\b|\bchief\b|\bc[teofmr]o\b|\bmanager\b|\bmanagement\b/i,
+  },
+  {
+    reason: 'junior or associate level',
+    re: /\b(associates?|juniors?|jr\.?|intern(ship)?s?|entry[- ]level|apprentices?|new\s+grads?)\b/i,
+  },
+  {
+    reason: 'a region outside the US, UK or Europe',
+    re: /\b(asia|apac|japan|china|india|singapore|korea|latam|latin america|brazil|mexico|africa|middle east|mena|australia|anz|emea|dubai|hong kong)\b/i,
+  },
+]
+
 /** Titles that are the whole point. Nothing below can reject these. */
 export const TITLE_ALLOW: { name: string; re: RegExp }[] = [
   { name: 'design engineer', re: /\bdesign\s+engineer/i },
@@ -222,7 +245,10 @@ export function evaluate(posting: FilterInput): FilterVerdict {
   const title = posting.role_title ?? ''
   const text = (posting.description_text ?? '').toLowerCase()
 
-  const allow = TITLE_ALLOW.find((a) => a.re.test(title))
+  // An override beats the allowlist: a Head of Applied AI req is still a
+  // management req.
+  const override = OVERRIDE_REJECT.find((r) => r.re.test(title))
+  const allow = override ? undefined : TITLE_ALLOW.find((a) => a.re.test(title))
   let reject: { reason: string; re: RegExp; bare?: boolean } | undefined = allow
     ? undefined
     : TITLE_REJECT.find((r) => r.re.test(title))
