@@ -12,6 +12,7 @@ import { cn } from '@/lib/ui'
 const VIEWS = [
   { href: '/', label: 'Pipeline', blurb: 'Roles being worked toward an application' },
   { href: '/tracker', label: 'Tracker', blurb: 'Everything already sent, and what came back' },
+  { href: '/prep', label: 'Prep', blurb: 'Interview sheets: the angle, the vocabulary, and where he is weakest' },
   { href: '/facts', label: 'Facts', blurb: 'What may be claimed, and what never can' },
 ]
 

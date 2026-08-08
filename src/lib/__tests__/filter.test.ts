@@ -115,6 +115,9 @@ await describe('filter: title rejects', () => {
     ['Capital Markets - Infrastructure Financing', 'finance'],
     ['Amazon GTM Partnership, Startups', 'partnerships'],
     ['Contract Facilitator', 'contract'],
+    ['Asia Editor', 'region'],
+    ['Product Designer, APAC', 'region'],
+    ['Head of Design, LATAM', 'region'],
   ]
   for (const [title] of rejects) {
     const v = verdict(title)
@@ -190,6 +193,10 @@ await describe('filter: location', () => {
   eq('flagged as a US move', at('San Francisco').relocation, 'relocate_us')
   check('London passes', at('London, United Kingdom').decision === 'pass')
   eq('flagged as a UK move', at('London, United Kingdom').relocation, 'relocate_uk')
+  // Europe is in scope; anything further afield is not.
+  check('Berlin passes', at('Berlin, Germany').decision === 'pass')
+  eq('flagged as an EU move', at('Berlin, Germany').relocation, 'relocate_eu')
+  check('Singapore rejects', at('Singapore').decision === 'reject')
   eq('New York needs no move', at('New York, NY').relocation, null)
 
   // Somewhere he would need a visa is still out.

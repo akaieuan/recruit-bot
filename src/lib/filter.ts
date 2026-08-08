@@ -39,6 +39,30 @@ export const TITLE_ALLOW: { name: string; re: RegExp }[] = [
  */
 export const TITLE_REJECT: { reason: string; re: RegExp }[] = [
   {
+    // Semafor posts an Asia Editor out of New York. The desk is Asia, so the
+    // title decides even when the office is around the corner. His search is
+    // the US, the UK and Europe.
+    reason: 'a region outside the US, UK or Europe',
+    re: /\b(asia|apac|japan|china|india|singapore|korea|latam|latin america|brazil|mexico|africa|middle east|mena|australia|anz|emea|dubai|hong kong)\b/i,
+  },
+  {
+    reason: 'infrastructure, hardware or datacenter',
+    re: /\bdatacenter\b|\bdata\s?cent(er|re)\b|\bhardware\b|\bsilicon\b|\bserver\s+lifecycle\b|\bsupply\s+chain\b|\bcapacity\s+engineering\b/i,
+  },
+  {
+    reason: 'finance, capital or corporate development',
+    re: /\bcapital\s+markets\b|\bfinanc(e|ing|ial)\b|\btreasury\b|\bcontroller\b|\bcorporate\s+development\b|\bfp&a\b|\bprocurement\b/i,
+  },
+  {
+    reason: 'partnerships or alliances',
+    re: /\bpartnerships?\b|\balliances?\b|\bgtm\b|\bgo[\s-]?to[\s-]?market\b|\bchannel\b|\bbizops\b/i,
+  },
+  {
+    // A contract or fractional engagement is not the job he is looking for.
+    reason: 'contract or fractional engagement',
+    re: /\bcontract(or)?\b|\bfractional\b|\bfreelance\b|\bpart[\s-]?time\b|\bfacilitator\b|\btemp\b/i,
+  },
+  {
     // Overqualification reads as flight risk, and the level argues down.
     reason: 'junior or associate level',
     // Plurals matter: "Technical Interns and New Grads" slipped past
@@ -178,6 +202,7 @@ export function relocationFlag(location: string | null | undefined, remotePolicy
   if (fit === 'nyc' || fit === 'unknown') return null
   if (remotePolicy === 'remote') return 'remote'
   if (fit === 'uk') return 'relocate_uk'
+  if (fit === 'eu') return 'relocate_eu'
   if (fit === 'us') return 'relocate_us'
   return null
 }

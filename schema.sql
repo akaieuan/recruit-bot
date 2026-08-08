@@ -146,3 +146,24 @@ CREATE TABLE IF NOT EXISTS applications (
 
 CREATE INDEX IF NOT EXISTS idx_applications_status ON applications (status);
 CREATE INDEX IF NOT EXISTS idx_applications_followup ON applications (follow_up_at);
+
+-- Interview prep, one row per posting. Written by /prep, read by the Prep page.
+-- Sections mirror the doc that worked: what the product is, the vocabulary that
+-- is expensive to get wrong, why he fits, where he does not, and what to ask.
+CREATE TABLE IF NOT EXISTS prep (
+  id             INTEGER PRIMARY KEY,
+  posting_id     INTEGER NOT NULL UNIQUE REFERENCES postings (id) ON DELETE CASCADE,
+  written_at     TEXT NOT NULL,
+  headline       TEXT,
+  product        TEXT,
+  -- JSON [{ term, meaning }]. Getting a domain word wrong is expensive.
+  vocabulary     TEXT,
+  the_angle      TEXT,
+  -- JSON [string]
+  why_you_fit    TEXT,
+  where_you_lack TEXT,
+  scoped         TEXT,
+  questions      TEXT,
+  this_week      TEXT,
+  sources        TEXT
+);
