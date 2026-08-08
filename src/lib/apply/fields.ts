@@ -38,9 +38,9 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
  * answer or decline, and a compensation number is a negotiating position, not
  * a data-entry task.
  */
-const NEVER_FILL: { re: RegExp; reason: string; demographic?: boolean }[] = [
+const NEVER_FILL: { re: RegExp; reason: string; demographic?: boolean; comp?: boolean }[] = [
   { re: /\b(gender|pronouns?|races?|ethnicit\w*|veterans?|disabilit\w*|hispanic|latino|lgbtq?\w*|sexual orientation|self identif\w*|demographics?)\b/, reason: 'demographic question, optional, left blank', demographic: true },
-  { re: /\b(salary|compensation|pay expectation|desired pay|expected pay|rate expectation)\b/, reason: 'compensation is his call, never auto-filled' },
+  { re: /\b(salary|compensation|pay expectation|desired pay|expected pay|rate expectation)\b/, reason: 'no published band, so no midpoint to take', comp: true },
 ]
 
 interface MapArgs {
@@ -50,9 +50,38 @@ interface MapArgs {
   answers?: Record<string, string>
   /** Absolute paths to the resume and generated cover letter. */
   files?: { resume?: string; cover?: string; portfolio?: string }
+  /** Midpoint of the band this employer published, when there is one. */
+  compMidpoint?: string | null
 }
 
-export function resolveField({ field, profile, answers = {}, files = {} }: MapArgs): Resolution {
+export function compBandMidpoint(min: number | null, max: number | null): string | null {
+  if (!min || !max || max <= min) return null
+  return `$${Math.round((min + max) / 2 / 1000)},000`
+}
+
+/**
+ * What to ask for when the employer publishes nothing.
+ *
+ * NYC market rates for the titles he targets, taken to the midpoint the same
+ * way a published band is. Seniority in the title moves it; his floor is
+ * $150k and nothing here goes below it. This is a market estimate rather than
+ * a fact about him, which is why it is a separate function: a number he can
+ * overrule, not something the fact library is asserting.
+ */
+export function compEstimate(roleTitle: string): string {
+  const t = roleTitle.toLowerCase()
+  let base = 190
+  if (/\bdesign engineer|product engineer|founding designer|design technologist\b/.test(t)) base = 195
+  if (/\bforward.?deployed|\bfde\b|solutions engineer|applied ai|ai engineer\b/.test(t)) base = 200
+  if (/\bai strateg|strategist\b/.test(t)) base = 180
+  if (/\bproduct designer\b/.test(t)) base = 185
+  if (/\bstaff\b|\bprincipal\b/.test(t)) base += 25
+  if (/\bsenior\b|\bsr\.?\b|\blead\b/.test(t)) base += 10
+  if (/\bfounding\b/.test(t)) base += 5
+  return `$${Math.max(150, Math.min(260, base))},000`
+}
+
+export function resolveField({ field, profile, answers = {}, files = {}, compMidpoint = null }: MapArgs): Resolution {
   const label = norm(field.label || field.name)
   const name = norm(field.name)
   const hay = `${label} ${name}`
@@ -65,6 +94,15 @@ export function resolveField({ field, profile, answers = {}, files = {} }: MapAr
     if (rule.demographic && field.required === true) {
       const value = demographicAnswer(hay, profile)
       if (value !== null) return coerce(value, field, 'his stated answer, required by this form')
+    }
+    // The midpoint of a published band. Never the bottom, which anchors low,
+    // and never the top, which prices him out of the conversation.
+    if (rule.comp) {
+      if (compMidpoint !== null) {
+        return { action: 'fill', value: compMidpoint, source: 'midpoint of the posted band', field }
+      }
+      const estimate = compEstimate(field.label)
+      return { action: 'fill', value: estimate, source: 'market estimate, no band published', field }
     }
     return { action: 'skip', reason: rule.reason, field }
   }

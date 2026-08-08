@@ -1,5 +1,5 @@
 import { check, describe, eq } from './harness.ts'
-import { resolveField, blockers, type DetectedField } from '../apply/fields.ts'
+import { compBandMidpoint, compEstimate, resolveField, blockers, type DetectedField } from '../apply/fields.ts'
 import type { Profile } from '../apply/profile.ts'
 import { priorFor } from '../already.ts'
 import { normalizeCompany, normalizeRole } from '../dedupe.ts'
@@ -59,10 +59,7 @@ await describe('apply: never answers for him', () => {
     eq(`skips "${label}"`, r(f(label)).action, 'skip')
   }
 
-  // Compensation is a negotiating position, not a form field to autofill.
-  const comp = r(f('What is your target compensation range?'))
-  eq('skips compensation', comp.action, 'skip')
-  check('and says why', (comp as { reason: string }).reason.includes('his call'))
+
 
   // He gave a standing answer, so this stopped being a gap handed back to him.
   eq('referral source uses his standing answer', (r(f('How did you hear about this job?')) as { value: string }).value, 'LinkedIn')
@@ -96,6 +93,30 @@ await describe('apply: demographics only when the form insists', () => {
     (r(f('Are you Hispanic or Latino?', 'multi_value_single_select', { required: true, options: ['Yes', 'No'] })) as { value: string }).value,
     'No',
   )
+})
+
+await describe('apply: compensation takes the midpoint of the posted band', () => {
+  // Never the bottom, which anchors low. Never the top, which prices him out
+  // of a conversation he wants to have.
+  eq('162 to 209 gives 186', compBandMidpoint(162000, 209000), '$186,000')
+  eq('180 to 230 gives 205', compBandMidpoint(180000, 230000), '$205,000')
+  eq('no band gives nothing', compBandMidpoint(null, null), null)
+  eq('one side only gives nothing', compBandMidpoint(180000, null), null)
+
+  // No band published: a market estimate for the title, never below his floor.
+  eq('design engineer', compEstimate('Design Engineer'), '$195,000')
+  eq('senior lifts it', compEstimate('Senior Design Engineer'), '$205,000')
+  eq('staff lifts it more', compEstimate('Staff Product Designer'), '$210,000')
+  eq('fde', compEstimate('Forward Deployed Engineer'), '$200,000')
+  eq('founding design engineer', compEstimate('Founding Design Engineer'), '$200,000')
+  check('never below his floor', Number(compEstimate('AI Strategist').replace(/\D/g, '')) >= 150000)
+
+  const withBand = resolveField({
+    field: f('What are your compensation expectations?'), profile: PROFILE, files: {},
+    compMidpoint: compBandMidpoint(162000, 209000),
+  })
+  eq('the form gets the midpoint', (withBand as { value: string }).value, '$186,000')
+  eq('and says where it came from', (withBand as { source: string }).source, 'midpoint of the posted band')
 })
 
 await describe('apply: option-constrained fields', () => {

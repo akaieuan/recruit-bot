@@ -7,7 +7,7 @@ import { latestDrafts } from '../drafts.ts'
 import { draftableQuestions } from '../greenhouse.ts'
 import { renderCoverLetter } from '../pdf/cover.ts'
 import { readProfile, profileGaps, type Profile } from './profile.ts'
-import { resolveField, summarize, type DetectedField, type Resolution } from './fields.ts'
+import { compBandMidpoint, compEstimate, resolveField, summarize, type DetectedField, type Resolution } from './fields.ts'
 import type { ApplicationQuestion, Posting } from '../types.ts'
 
 /**
@@ -122,7 +122,10 @@ export async function buildPlan(
     : undefined
   gaps.unshift(...profileGaps(profile, askedFor))
 
-  const resolutions = knownFields.map((field) => resolveField({ field, profile, answers, files }))
+  // A published band takes its midpoint; without one, a market estimate for
+  // the title. Either way the number is visible in the plan before it is used.
+  const compMidpoint = compBandMidpoint(posting.comp_min, posting.comp_max) ?? compEstimate(posting.role_title)
+  const resolutions = knownFields.map((field) => resolveField({ field, profile, answers, files, compMidpoint }))
   const unresolvedRequired = resolutions.filter((r) => r.action === 'unresolved' && r.field.required !== false)
 
   return {
