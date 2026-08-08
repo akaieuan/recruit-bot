@@ -62,23 +62,47 @@ export function compBandMidpoint(min: number | null, max: number | null): string
 /**
  * What to ask for when the employer publishes nothing.
  *
- * NYC market rates for the titles he targets, taken to the midpoint the same
- * way a published band is. Seniority in the title moves it; his floor is
- * $150k and nothing here goes below it. This is a market estimate rather than
- * a fact about him, which is why it is a separate function: a number he can
- * overrule, not something the fact library is asserting.
+ * Derived from the bands actually published for comparable NYC roles rather
+ * than invented: `compFromComparables` takes the median midpoint of postings
+ * with the same title shape. The caller supplies those comparables, so the
+ * number traces to real postings and moves as the market does.
+ *
+ * A market estimate is not a fact about him. It is a number he can overrule,
+ * which is why it never enters the fact library.
  */
-export function compEstimate(roleTitle: string): string {
+export function compFromComparables(
+  roleTitle: string,
+  comparables: { role_title: string; comp_min: number | null; comp_max: number | null }[],
+): { value: string; basis: string } {
+  const shape = (t: string) =>
+    /forward.?deployed|\bfde\b|solutions engineer|applied ai|\bai engineer\b|agent engineer/i.test(t) ? 'fde'
+      : /design engineer|product engineer|design technologist|founding designer/i.test(t) ? 'design-eng'
+        : /product designer/i.test(t) ? 'product-design'
+          : 'other'
+
+  const want = shape(roleTitle)
+  // "other" is not a comparable set, it is everything left over. A title that
+  // does not match a known shape falls back to his own band rather than to the
+  // median of four hundred unrelated postings.
+  if (want === 'other') return { value: '$200,000', basis: 'no comparable title shape; midpoint of his own band' }
+
+  const mids = comparables
+    .filter((c) => c.comp_min && c.comp_max && shape(c.role_title) === want)
+    .map((c) => (c.comp_min! + c.comp_max!) / 2)
+    // Frontier labs and consultancies post bands two to three times a seed
+    // startup's for the same title. Including them prices him out of the
+    // companies he is actually targeting.
+    .filter((m) => m >= 140_000 && m <= 280_000)
+    .sort((a, b) => a - b)
+
+  if (!mids.length) return { value: '$200,000', basis: 'no comparable band published; midpoint of his own band' }
+
+  const median = mids[Math.floor(mids.length / 2)]!
+  // Seniority in the title moves it off the median of the whole set.
   const t = roleTitle.toLowerCase()
-  let base = 190
-  if (/\bdesign engineer|product engineer|founding designer|design technologist\b/.test(t)) base = 195
-  if (/\bforward.?deployed|\bfde\b|solutions engineer|applied ai|ai engineer\b/.test(t)) base = 200
-  if (/\bai strateg|strategist\b/.test(t)) base = 180
-  if (/\bproduct designer\b/.test(t)) base = 185
-  if (/\bstaff\b|\bprincipal\b/.test(t)) base += 25
-  if (/\bsenior\b|\bsr\.?\b|\blead\b/.test(t)) base += 10
-  if (/\bfounding\b/.test(t)) base += 5
-  return `$${Math.max(150, Math.min(260, base))},000`
+  const bump = /\bstaff\b|\bprincipal\b/.test(t) ? 1.12 : /\bsenior\b|\bsr\.?\b|\blead\b/.test(t) ? 1.05 : 1
+  const value = Math.max(150, Math.min(280, Math.round((median * bump) / 1000 / 5) * 5))
+  return { value: `$${value},000`, basis: `median of ${mids.length} comparable NYC bands` }
 }
 
 export function resolveField({ field, profile, answers = {}, files = {}, compMidpoint = null }: MapArgs): Resolution {
@@ -101,8 +125,7 @@ export function resolveField({ field, profile, answers = {}, files = {}, compMid
       if (compMidpoint !== null) {
         return { action: 'fill', value: compMidpoint, source: 'midpoint of the posted band', field }
       }
-      const estimate = compEstimate(field.label)
-      return { action: 'fill', value: estimate, source: 'market estimate, no band published', field }
+      return { action: 'skip', reason: rule.reason, field }
     }
     return { action: 'skip', reason: rule.reason, field }
   }

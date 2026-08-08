@@ -1,13 +1,13 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { openDb, type Db } from '../db.ts'
+import { openDb, plainAll, type Db } from '../db.ts'
 import { PATHS } from '../paths.ts'
 import { getPosting } from '../postings.ts'
 import { latestDrafts } from '../drafts.ts'
 import { draftableQuestions } from '../greenhouse.ts'
 import { renderCoverLetter } from '../pdf/cover.ts'
 import { readProfile, profileGaps, type Profile } from './profile.ts'
-import { compBandMidpoint, compEstimate, resolveField, summarize, type DetectedField, type Resolution } from './fields.ts'
+import { compBandMidpoint, compFromComparables, resolveField, summarize, type DetectedField, type Resolution } from './fields.ts'
 import type { ApplicationQuestion, Posting } from '../types.ts'
 
 /**
@@ -124,7 +124,18 @@ export async function buildPlan(
 
   // A published band takes its midpoint; without one, a market estimate for
   // the title. Either way the number is visible in the plan before it is used.
-  const compMidpoint = compBandMidpoint(posting.comp_min, posting.comp_max) ?? compEstimate(posting.role_title)
+  // A published band takes its midpoint. Without one, the median midpoint of
+  // comparable NYC postings that did publish, so the number traces to real
+  // bands rather than a guess.
+  const comparables = plainAll<{ role_title: string; comp_min: number | null; comp_max: number | null }>(
+    db.prepare(
+      `SELECT role_title, comp_min, comp_max FROM postings
+       WHERE comp_min IS NOT NULL AND closed_at IS NULL
+         AND (location LIKE '%New York%' OR location LIKE '%NYC%' OR location LIKE '%Brooklyn%')`,
+    ).all(),
+  )
+  const compMidpoint =
+    compBandMidpoint(posting.comp_min, posting.comp_max) ?? compFromComparables(posting.role_title, comparables).value
   const resolutions = knownFields.map((field) => resolveField({ field, profile, answers, files, compMidpoint }))
   const unresolvedRequired = resolutions.filter((r) => r.action === 'unresolved' && r.field.required !== false)
 

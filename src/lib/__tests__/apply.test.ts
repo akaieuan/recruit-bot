@@ -1,5 +1,5 @@
 import { check, describe, eq } from './harness.ts'
-import { compBandMidpoint, compEstimate, resolveField, blockers, type DetectedField } from '../apply/fields.ts'
+import { compBandMidpoint, compFromComparables, resolveField, blockers, type DetectedField } from '../apply/fields.ts'
 import type { Profile } from '../apply/profile.ts'
 import { priorFor } from '../already.ts'
 import { normalizeCompany, normalizeRole } from '../dedupe.ts'
@@ -103,13 +103,25 @@ await describe('apply: compensation takes the midpoint of the posted band', () =
   eq('no band gives nothing', compBandMidpoint(null, null), null)
   eq('one side only gives nothing', compBandMidpoint(180000, null), null)
 
-  // No band published: a market estimate for the title, never below his floor.
-  eq('design engineer', compEstimate('Design Engineer'), '$195,000')
-  eq('senior lifts it', compEstimate('Senior Design Engineer'), '$205,000')
-  eq('staff lifts it more', compEstimate('Staff Product Designer'), '$210,000')
-  eq('fde', compEstimate('Forward Deployed Engineer'), '$200,000')
-  eq('founding design engineer', compEstimate('Founding Design Engineer'), '$200,000')
-  check('never below his floor', Number(compEstimate('AI Strategist').replace(/\D/g, '')) >= 150000)
+  // No band published: the median midpoint of comparable NYC postings that
+  // did publish, so the number traces to real bands rather than a guess.
+  const market = [
+    { role_title: 'Forward Deployed Engineer', comp_min: 120000, comp_max: 200000 },
+    { role_title: 'Solutions Engineer', comp_min: 125000, comp_max: 250000 },
+    { role_title: 'Applied AI Engineer', comp_min: 175000, comp_max: 250000 },
+    { role_title: 'Software Engineer, Applied AI', comp_min: 200000, comp_max: 300000 },
+    { role_title: 'Senior Product Designer', comp_min: 130000, comp_max: 170000 },
+  ]
+  eq('fde takes the fde median', compFromComparables('Solutions Engineer, AI', market).value, '$215,000')
+  check('and says what it is based on', compFromComparables('Solutions Engineer, AI', market).basis.includes('comparable'))
+  eq('a product design title takes its own set', compFromComparables('Product Designer', market).value, '$150,000')
+
+  // A frontier-lab band is not a comparable for a seed startup role.
+  const withOutlier = market.concat([{ role_title: 'Forward Deployed Engineer', comp_min: 320000, comp_max: 500000 }])
+  eq('an outlier band is excluded', compFromComparables('Solutions Engineer, AI', withOutlier).value, '$215,000')
+  // An unrecognised title shape falls back rather than averaging everything.
+  eq('unknown shape falls back', compFromComparables('Chief Vibes Officer', market).value, '$200,000')
+  eq('senior lifts it', compFromComparables('Senior Applied AI Engineer', market).value, '$225,000')
 
   const withBand = resolveField({
     field: f('What are your compensation expectations?'), profile: PROFILE, files: {},
