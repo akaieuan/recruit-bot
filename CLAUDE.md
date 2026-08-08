@@ -124,3 +124,15 @@ the files, then stop and show him. He sends it.
 
 Ashby does not publish an application form schema, so its fields are read from
 the live page; Greenhouse's come from `?questions=true` and are known upfront.
+
+### The resume upload is the one step that needs him
+
+Browser file upload only accepts files the session is allowed to read, and
+paths inside this repo fail the tool's own argument validation. So the resume
+cannot be attached from here: every other field can be filled, and the upload
+is his click.
+
+This affects every application, not one of them. If it needs solving properly,
+`/add-dir` on a folder holding the resume, outside this repo, is the thing to
+try first. Until then: fill everything, then hand him the tab for the upload
+and the submit.
