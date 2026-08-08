@@ -56,6 +56,16 @@ interface MapArgs {
 
 export function compBandMidpoint(min: number | null, max: number | null): string | null {
   if (!min || !max || max <= min) return null
+
+  // A very wide band usually spans several levels, so its midpoint prices him
+  // against the senior end of a ladder he is four years into. Tenex posted
+  // $240-500k, where the midpoint is $370k; the answer that keeps the
+  // conversation open is a range just above their floor. Never below it.
+  const spread = max - min
+  if (spread >= 150_000) {
+    const round10 = (n: number) => Math.round(n / 10_000) * 10
+    return `$${round10(min + spread * 0.04)},000 - $${round10(min + spread * 0.23)},000`
+  }
   return `$${Math.round((min + max) / 2 / 1000)},000`
 }
 

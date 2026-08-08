@@ -101,6 +101,11 @@ await describe('apply: compensation takes the midpoint of the posted band', () =
   eq('162 to 209 gives 186', compBandMidpoint(162000, 209000), '$186,000')
   eq('180 to 230 gives 205', compBandMidpoint(180000, 230000), '$205,000')
   eq('no band gives nothing', compBandMidpoint(null, null), null)
+
+  // A 260k-wide band spans several levels. Its midpoint would ask $370,000,
+  // which prices him against the senior end rather than his own.
+  eq('a wide band gives a range above their floor', compBandMidpoint(240_000, 500_000), '$250,000 - $300,000')
+  check('and never below their floor', !compBandMidpoint(240_000, 500_000)!.includes('$240,000 -'))
   eq('one side only gives nothing', compBandMidpoint(180000, null), null)
 
   // No band published: the median midpoint of comparable NYC postings that
