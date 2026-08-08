@@ -18,9 +18,16 @@ The library also carries a `gaps` list of things he does not do. Never claim
 one, in any phrasing. The draft validator scans for them and refuses the
 submission, but the validator is a backstop, not the rule.
 
-**2. Nothing is sent without him saying so, per application.**
+**2. Nothing is sent without him saying so, and files are never attached.**
 
-The tool fills forms and uploads files. It does not press submit.
+The tool fills text fields. It does not attach files and it does not press
+submit.
+
+Fetching a file into a form from script is the part that reads as automation
+to an ATS, and the account it would cost is his. Attaching is off by default
+and a test pins it that way. Both files sit ready: the resume where
+`data/config.json` points, the cover letter written into the shared cover
+folder. The two uploads and the submit are his clicks.
 
 `pnpm cli apply <postingId>` assembles everything first: the resume, the
 rendered cover letter, and a value for every field it can resolve. Then, in a
@@ -47,8 +54,13 @@ Full rules in `data/voice.md`. The ones that get broken most:
 - No LinkedIn vocabulary: "passionate about", "results-driven", "proven track
   record", "excited to leverage", "fast-paced environment".
 - No "X is a Y wearing Z's clothes" metaphors. Say the plain thing.
-- Lead with concrete work, not adjectives. Numbers do the work: 1,038 commits,
-  42 server components under 1KB, 30s to 1s.
+- Lead with concrete work, not adjectives. Numbers do the work: 42 server
+  components under 1KB, 30s to 1s, 19 primitives across 6 npm packages.
+- **Lead with what he built and who used it, not with commit counts.** The
+  resume never mentions 1,038 commits. It is true and it is in the library,
+  but it is a supporting detail, and opening on it argues effort rather than
+  judgement. `data/resume.pdf` is the document employers actually read: match
+  its framing before reaching for anything else.
 - Declarative, clipped sentences. Short paragraphs. One strong opinion per
   piece, argued rather than asserted.
 - A closing line that lands rather than trails off.
@@ -125,14 +137,15 @@ the files, then stop and show him. He sends it.
 Ashby does not publish an application form schema, so its fields are read from
 the live page; Greenhouse's come from `?questions=true` and are known upfront.
 
-### The resume upload is the one step that needs him
+### Uploads are his, on purpose
 
-Browser file upload only accepts files the session is allowed to read, and
-paths inside this repo fail the tool's own argument validation. So the resume
-cannot be attached from here: every other field can be filled, and the upload
-is his click.
+`pnpm cli apply <id> --payload` writes one script that fills every text field
+in a single execution. Run it in the tab, read the report it leaves on
+`window.__recruitbot`, and hand him the tab. He attaches the two files and
+submits.
 
-This affects every application, not one of them. If it needs solving properly,
-`/add-dir` on a folder holding the resume, outside this repo, is the thing to
-try first. Until then: fill everything, then hand him the tab for the upload
-and the submit.
+This is a decision, not a limitation. Doing it any other way risks the
+LinkedIn and ATS accounts the whole search runs on.
+
+Then `pnpm cli record <id>` writes the tracker row, the follow-up date and the
+posting stage in one step, after he has actually sent it.
