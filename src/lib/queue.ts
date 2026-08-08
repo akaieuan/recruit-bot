@@ -5,6 +5,7 @@ import { workDir, type WorkStep } from './paths.ts'
 import { evaluate } from './filter.ts'
 import { draftableQuestions } from './greenhouse.ts'
 import { getPosting, postingsByStage, setStage } from './postings.ts'
+import { priorApplications, priorFor } from './already.ts'
 import { latestDrafts, parseJsonArray } from './drafts.ts'
 import { readFacts } from './facts.ts'
 import type { ApplicationQuestion, Draft, Posting, Research, Score, Stage } from './types.ts'
@@ -94,7 +95,23 @@ export function buildQueue(db: Db, step: WorkStep, limit: number): QueueResult {
 
 function postingPackets(db: Db, step: WorkStep, limit: number): { id: string; body: unknown }[] {
   const stage = STEP_INPUT_STAGE[step]
-  const postings = postingsByStage(db, stage, limit)
+  // Roles already in the tracker are retired rather than queued. A whole batch
+  // of ten came back as applications he had already sent, one of them to a
+  // company that had rejected him the same day.
+  const prior = priorApplications(db)
+  const postings: typeof pool = []
+  const pool = postingsByStage(db, stage, limit * 4)
+
+  for (const p of pool) {
+    if (postings.length >= limit) break
+    const seen = priorFor(prior, p)
+    if (!seen) {
+      postings.push(p)
+      continue
+    }
+    const when = seen.applied_at ? ` on ${seen.applied_at}` : ''
+    setStage(db, p.id, 'skipped', `already ${seen.status}${when}`)
+  }
 
   return postings.map((p) => {
     const verdict = evaluate(p)

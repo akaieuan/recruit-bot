@@ -1,6 +1,8 @@
 import { check, describe, eq } from './harness.ts'
 import { resolveField, blockers, type DetectedField } from '../apply/fields.ts'
 import type { Profile } from '../apply/profile.ts'
+import { priorFor } from '../already.ts'
+import { normalizeCompany, normalizeRole } from '../dedupe.ts'
 
 const PROFILE: Profile = {
   first_name: 'Ieuan', last_name: 'King', full_name: 'Ieuan King',
@@ -163,4 +165,25 @@ await describe('apply: readiness', () => {
 
   const optional = [f('First Name'), f('Phone', 'input_text', { required: false })]
   eq('an optional one does not', blockers(optional.map((field) => r(field))).length, 0)
+})
+
+await describe('already applied', () => {
+  // The tracker names roles differently from the boards, so matching has to
+  // survive "Senior Product Designer (Founding)" against "Product Designer"
+  // while keeping genuinely different reqs apart.
+  const prior = new Map([
+    [`${normalizeCompany('Revin')}::${normalizeRole('Senior Product Designer (Founding)')}`,
+      { status: 'applied', role: 'Senior Product Designer (Founding)', applied_at: '2026-08-07' }],
+    [`${normalizeCompany('Moment')}::${normalizeRole('Design Engineer')}`,
+      { status: 'rejected', role: 'Design Engineer', applied_at: '2026-08-07' }],
+  ])
+
+  check('a differently worded prior application matches',
+    Boolean(priorFor(prior, { company: 'Revin', role_title: 'Senior Product Designer' })))
+  eq('a rejection is reported as one',
+    priorFor(prior, { company: 'Moment', role_title: 'Design Engineer' })?.status, 'rejected')
+  check('a different role at the same company does not match',
+    !priorFor(prior, { company: 'Moment', role_title: 'Agent Engineer' }))
+  check('a different company does not match',
+    !priorFor(prior, { company: 'Maple', role_title: 'Design Engineer' }))
 })
