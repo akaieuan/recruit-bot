@@ -74,6 +74,26 @@ export const TITLE_REJECT: { reason: string; re: RegExp }[] = [
     re: /\bengineer(ing)?\b[\s\S]*\b(security|reliability|platform|infrastructure|distributed|supercomputing|compiler|kernel|database|observability|networking|embedded)\b|\b(security|reliability|platform|infrastructure|distributed|supercomputing|compiler|kernel|database|observability|networking|embedded)\b[\s\S]*\bengineer(ing)?\b/i,
   },
   {
+    // Anthropic and other large employers post whole org charts. None of these
+    // are design or the kind of engineering he does, and all four reached a
+    // model before this rule existed.
+    reason: 'infrastructure, hardware or datacenter',
+    re: /\bdatacenter\b|\bdata\s?cent(er|re)\b|\bhardware\b|\bsilicon\b|\bserver\s+lifecycle\b|\bsupply\s+chain\b|\bcapacity\s+engineering\b/i,
+  },
+  {
+    reason: 'finance, capital or corporate development',
+    re: /\bcapital\s+markets\b|\bfinanc(e|ing|ial)\b|\btreasury\b|\bcontroller\b|\bcorporate\s+development\b|\bfp&a\b|\bprocurement\b/i,
+  },
+  {
+    reason: 'partnerships or alliances',
+    re: /\bpartnerships?\b|\balliances?\b|\bgtm\b|\bgo[\s-]?to[\s-]?market\b|\bchannel\b|\bbizops\b/i,
+  },
+  {
+    // A contract or fractional engagement is not the job he is looking for.
+    reason: 'contract or fractional engagement',
+    re: /\bcontract(or)?\b|\bfractional\b|\bfreelance\b|\bpart[\s-]?time\b|\bfacilitator\b|\btemp\b/i,
+  },
+  {
     reason: 'developer relations or evangelism',
     re: /\bdev\s?rel\b|\bdeveloper\s+(advocate|relations|experience)\b|\bevangelist\b|\badvocate\b|\bcommunity\b/i,
   },

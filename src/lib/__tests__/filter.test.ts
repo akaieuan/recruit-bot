@@ -110,6 +110,11 @@ await describe('filter: title rejects', () => {
     ['Design Interns', 'junior'],
     ['Associates, Product', 'junior'],
     ['GTM Systems Administrator', 'non-design'],
+    ['Staff Engineer, Datacenter Server Lifecycle', 'infrastructure'],
+    ['Platform Hardware Security', 'hardware'],
+    ['Capital Markets - Infrastructure Financing', 'finance'],
+    ['Amazon GTM Partnership, Startups', 'partnerships'],
+    ['Contract Facilitator', 'contract'],
   ]
   for (const [title] of rejects) {
     const v = verdict(title)
