@@ -3,7 +3,7 @@ import { dueFollowUps, followUpDate } from '../../lib/tracker.ts'
 import { APPLICATION_STATUSES, type Application, type ApplicationStatus } from '../../lib/types.ts'
 import { args, fail, plural, table } from '../util.ts'
 
-export function run(argv: string[]): void {
+export async function run(argv: string[]): Promise<void> {
   const { values, positionals } = args(argv, {
     ambiguous: { type: 'boolean' },
     status: { type: 'string' },
@@ -11,6 +11,7 @@ export function run(argv: string[]): void {
     date: { type: 'string' },
     note: { type: 'string' },
     limit: { type: 'string' },
+    dry: { type: 'boolean' },
   })
   const sub = positionals[0] ?? 'list'
   const db = openDb()
@@ -27,6 +28,18 @@ export function run(argv: string[]): void {
       ...due.map((a) => [a.id, a.company, a.role.slice(0, 34), a.applied_at ?? '', a.follow_up_at ?? '']),
     ]))
     console.log('\nmark one done: pnpm cli tracker set --id <id> --note "followed up"')
+    return
+  }
+
+  if (sub === 'dedupe') {
+    const { dedupeApplications } = await import('../../lib/dedupe.ts')
+    const r = dedupeApplications(db, { dry: values.dry })
+    if (values.dry) {
+      console.log(`${r.groups} groups would merge, removing ${plural(r.merged, 'duplicate row')}`)
+      return
+    }
+    console.log(`merged ${plural(r.merged, 'duplicate')} into ${plural(r.kept, 'row')}`)
+    console.log(`${(db.prepare('SELECT count(*) AS n FROM applications').get() as { n: number }).n} applications remain`)
     return
   }
 
@@ -98,5 +111,5 @@ export function run(argv: string[]): void {
     return
   }
 
-  fail('usage: pnpm cli tracker <list|followups|set>')
+  fail('usage: pnpm cli tracker <list|followups|set|dedupe>')
 }
