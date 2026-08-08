@@ -54,6 +54,26 @@ interface MapArgs {
   compMidpoint?: string | null
 }
 
+/**
+ * How a value has to be written into a live form.
+ *
+ * React keeps its own copy of an input's value on `_valueTracker`. Writing
+ * through the prototype setter without clearing that first leaves React
+ * believing the field never changed, so the DOM shows the text and the form
+ * submits empty. This cost a day of applications that looked filled and were
+ * rejected as "Missing entry for required field".
+ */
+export const REACT_SAFE_SET = `
+  var proto = /textarea/i.test(el.tagName)
+    ? window.HTMLTextAreaElement.prototype
+    : window.HTMLInputElement.prototype
+  var setter = Object.getOwnPropertyDescriptor(proto, 'value').set
+  if (el._valueTracker) el._valueTracker.setValue('~')
+  setter.call(el, value)
+  el.dispatchEvent(new Event('input', { bubbles: true }))
+  el.dispatchEvent(new Event('change', { bubbles: true }))
+`
+
 export function compBandMidpoint(min: number | null, max: number | null): string | null {
   if (!min || !max || max <= min) return null
 

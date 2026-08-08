@@ -196,7 +196,7 @@ export function trackerRows(filter?: string): Application[] {
     db
       .prepare(
         `SELECT * FROM applications ${where}
-         ORDER BY (applied_at IS NULL), applied_at DESC, company LIMIT 400`,
+         ORDER BY (applied_at IS NULL), applied_at DESC, id DESC LIMIT 400`,
       )
       .all(...params),
   )

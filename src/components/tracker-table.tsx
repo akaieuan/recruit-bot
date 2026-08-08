@@ -73,6 +73,10 @@ export function TrackerTable({ rows }: { rows: Application[] }) {
       if (!a.applied_at) return 1
       if (!b.applied_at) return -1
       if (a.applied_at === b.applied_at) {
+        // Within a day, insertion order is the real chronology. Falling back to
+        // company name made a day of applications read as an alphabetical list.
+        const byId = (b.id ?? 0) - (a.id ?? 0)
+        if (a.applied_at_precision === b.applied_at_precision && byId !== 0) return dir === 'asc' ? -byId : byId
         // "before 2026-08-07" is a bound, not a day. It shares the date with
         // rows that really happened then, so it ranks below them rather than
         // crowding the top of a timeline it has no true position in.

@@ -137,6 +137,32 @@ the files, then stop and show him. He sends it.
 Ashby does not publish an application form schema, so its fields are read from
 the live page; Greenhouse's come from `?questions=true` and are known upfront.
 
+### Writing a value into a live form
+
+React keeps its own copy of an input's value on `_valueTracker`. Setting
+`.value` through the prototype setter without clearing that first leaves React
+believing the field never changed: the DOM shows the text, and the form submits
+empty with "Missing entry for required field". Always clear the tracker first.
+
+```js
+if (el._valueTracker) el._valueTracker.setValue('~')
+setter.call(el, value)
+el.dispatchEvent(new Event('input', { bubbles: true }))
+```
+
+Verify by reading the value back, not by reading the DOM before submit. A
+filled-looking form is not a filled form.
+
+### Knowing what was actually submitted
+
+A submitted Ashby form reloads into a fresh empty one, so the success banner is
+gone within seconds and the tab is indistinguishable from an unfinished one.
+Do not infer submission from the page.
+
+The evidence is the confirmation email: a "Thanks for applying to X" receipt in
+his inbox is proof, with a timestamp. `pnpm cli import linkedin` the next day
+is the other reliable reconciliation. Never record an application from a guess.
+
 ### Uploads are his, on purpose
 
 `pnpm cli apply <id> --payload` writes one script that fills every text field
